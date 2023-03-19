@@ -1,7 +1,8 @@
 #!/bin/bash
 
 install_pkg_if_not_installed() {
-	BIN_PATH=`which ${1}`
+	BIN_NAME="${1}"
+	BIN_PATH=`command -v "${BIN_NAME}"` # https://stackoverflow.com/a/677212
 	if [ -z "${BIN_PATH}" ]; then
 		echo "${1} not found. Trying to install ${1} ..."
 		install_pkgs "${1}"
