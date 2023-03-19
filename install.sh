@@ -56,6 +56,7 @@ link_fish_files() {
 SCRIPT_DIR=`readlink -f $(dirname "${BASH_SOURCE}")`
 
 echo "Checking prerrequisites ..."
+install_pkg_if_not_installed fish
 install_pkg_if_not_installed lsd
 install_pkg_if_not_installed wget
 echo
