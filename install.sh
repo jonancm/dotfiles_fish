@@ -113,7 +113,17 @@ link_fish_files() {
 	echo
 }
 
+check_version() {
+	BIN_NAME="${1}"
+	EXPECTED_VERSION="${2}"
+	VERSION=`${BIN_NAME} --version | awk '{print($3)}'` # FIXME: awk expression will only work with fish
+	if [ "${VERSION}" != "${EXPECTED_VERSION}" ]; then
+		panic "Error: expected ${BIN_NAME} version ${EXPECTED_VERSION}, got ${VERSION} instead!"
+	fi
+}
+
 install_fisher() {
+	check_version fish 3.6.0
 	# TODO: ask before running script from the internet
 	fish <<EOF
 curl -sL https://raw.githubusercontent.com/jorgebucaran/fisher/main/functions/fisher.fish | source
