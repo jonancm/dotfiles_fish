@@ -1,5 +1,38 @@
 # fish configuration files
 
+:fish: https://fishshell.com/[fish]
+:fish-tide-compatibility: https://github.com/IlanCosman/tide/wiki/Fish-version-compatibility[Fish version compatibility]
+:tide: https://github.com/IlanCosman/tide[tide]
+
+## System requirements
+
+Different distributions have different fish versions.
+
+The biggest source of problems is the compatibility between {fish} and {tide}
+(see {fish-tide-compatibility})
+
+To allow for compatibility with the most systems available, the {tide} version
+has been fixed to 5.0.1.
+
+Therefore, only the following combinations are supported:
+
+[cols="3*",options="header"]
+|===
+
+| OS
+| fish
+| tide
+
+| Fedora 37
+| 3.6.0
+| 5.0.1
+
+| Ubuntu 22.04
+| 3.3.1
+| 5.0.1
+
+|===
+
 ## Installation
 
 Run the bash script:
@@ -9,6 +42,15 @@ Run the bash script:
 bash install.sh
 ----
 
+[NOTE]
+====
+Some distributions might require some previous setup steps before you can
+run the install script.
+
+Please check the <<testing>> section for distribution-specific prerrequisites.
+====
+
+[[testing]]
 ## Testing
 
 ### Prerrequisites
@@ -16,20 +58,51 @@ bash install.sh
 * https://podman.io/[Podman]
 
 [NOTE]
-When using Podman with SELinux, you must https://devops.stackexchange.com/a/11277[add `:z` when you mount a volume].
+====
+When using Podman with SELinux, you must
+https://devops.stackexchange.com/a/11277[add `:z` when you mount a volume].
 
-### Fedora
+The commands in the following section reflect this.
+====
 
+### Fedora 37
+
+. Start the container:
++
 [source,bash]
 ----
 podman run -it -v ./:/ws:z -w /ws --rm fedora:37
+----
+
+. Run the install script:
++
+[source,bash]
+----
 ./install.sh
 ----
 
-### Ubuntu
+### Ubuntu 22.04
 
+. Start the container:
++
 [source,bash]
 ----
 podman run -it -v ./:/ws:z -w /ws --rm ubuntu:22.04
+----
+
+. Install `lsd`:
++
+[source,bash]
+----
+apt-get update
+apt-get install cargo
+cargo install lsd
+export PATH="$HOME/.cargo/bin:$PATH"
+----
+
+. Run the install script:
++
+[source,bash]
+----
 ./install.sh
 ----
