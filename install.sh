@@ -1,25 +1,39 @@
 #!/bin/bash
 
-install_pkg_if_not_installed() {
-	BIN_NAME="${1}"
+install_pkg_if_not_found() {
+	PKG_NAME="${1}"
+	BIN_NAME="${2}"
+	if [ -z "${BIN_NAME}" ]; then
+		BIN_NAME="${PKG_NAME}"
+	fi
 	BIN_PATH=`command -v "${BIN_NAME}"` # https://stackoverflow.com/a/677212
 	if [ -z "${BIN_PATH}" ]; then
-		echo "${1} not found. Trying to install ${1} ..."
-		install_pkgs "${1}"
+		echo "${PKG_NAME}: ${BIN_NAME} not found. Trying to install ${PKG_NAME} ..."
+		install_pkgs "${PKG_NAME}"
 	else
-		echo "${1} found at ${BIN_PATH}"
+		echo "${PKG_NAME}: ${BIN_NAME} found at ${BIN_PATH}"
 	fi
 }
 
 install_pkgs () {
+	# TODO: differentiate OS (Fedora, Ubuntu, etc.)
 	sudo dnf install "$*"
+}
+
+get_fonts_dir() {
+	USER=`whoami`
+	if [ "$USER" == "root" ]; then
+		echo "/usr/local/share/fonts"
+	else
+		echo "${HOME}/.local/share/fonts"
+	fi
 }
 
 install_nerd_fonts() {
 	echo "Installing Nerd Fonts ..."
 	RELEASE_TAG="${1}"
-	FONTS_DIR="${2}"
-	FONTS_LIST="${@:3}"
+	FONTS_LIST="${@:2}"
+	FONTS_DIR=`get_fonts_dir`
 	TMP_DIR=`mktemp -d`
 	for FONT_NAME in ${FONTS_LIST}; do
 		DEST_DIR="${FONTS_DIR}/nerd-fonts/${FONT_NAME}"
@@ -57,12 +71,14 @@ link_fish_files() {
 SCRIPT_DIR=`readlink -f $(dirname "${BASH_SOURCE}")`
 
 echo "Checking prerrequisites ..."
-install_pkg_if_not_installed fish
-install_pkg_if_not_installed lsd
-install_pkg_if_not_installed wget
+install_pkg_if_not_found fish
+install_pkg_if_not_found fontconfig fc-cache
+install_pkg_if_not_found lsd
+install_pkg_if_not_found unzip
+install_pkg_if_not_found wget
 echo
 
-install_nerd_fonts "v2.3.3" "${HOME}/.local/share/fonts" \
+install_nerd_fonts "v2.3.3" \
 	JetBrainsMono \
 	Meslo \
 	RobotoMono \
