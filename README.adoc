@@ -1,0 +1,35 @@
+# fish configuration files
+
+## Installation
+
+Run the bash script:
+
+[source,bash]
+----
+bash install.sh
+----
+
+## Testing
+
+### Prerrequisites
+
+* https://podman.io/[Podman]
+
+[NOTE]
+When using Podman with SELinux, you must https://devops.stackexchange.com/a/11277[add `:z` when you mount a volume].
+
+### Fedora
+
+[source,bash]
+----
+podman run -it -v ./:/ws:z -w /ws --rm fedora:37
+./install.sh
+----
+
+### Ubuntu
+
+[source,bash]
+----
+podman run -it -v ./:/ws:z -w /ws --rm ubuntu:22.04
+./install.sh
+----

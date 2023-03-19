@@ -1,5 +1,36 @@
 #!/bin/bash
 
+# Print error and exit
+panic() {
+	echo "$*" >&2
+	exit 1
+}
+
+# Run command as privileged (root) user
+# run_privileged <cmd> [<arg> ...]
+run_privileged() {
+	if [ `id -u` -eq 0 ]; then
+		$*
+	else
+		if [ ! -z `command -v sudo` ]; then
+			sudo $*
+		elif [ ! -z `command -v doas` ]; then
+			doas $*
+		else
+			panic "Unable to run command as root: no doas, sudo have been found"
+		fi
+	fi
+}
+
+# Bootstrap package manager
+bootstrap_pkg() {
+	if [ ! -z `command -v apt-get` ]; then
+		run_privileged apt-get update
+	fi
+}
+
+# Install a package if the given executable isn't found
+# install_pkg_if_not_found <pkg> <exe>
 install_pkg_if_not_found() {
 	PKG_NAME="${1}"
 	BIN_NAME="${2}"
@@ -10,25 +41,37 @@ install_pkg_if_not_found() {
 	if [ -z "${BIN_PATH}" ]; then
 		echo "${PKG_NAME}: ${BIN_NAME} not found. Trying to install ${PKG_NAME} ..."
 		install_pkgs "${PKG_NAME}"
+		if [ $? -ne 0 ]; then
+			panic "Failed to install package: ${PKG_NAME}"
+		fi
 	else
 		echo "${PKG_NAME}: ${BIN_NAME} found at ${BIN_PATH}"
 	fi
 }
 
+# Install packages
+# install_pkgs <pkg> [<pkg> ...]
 install_pkgs () {
-	# TODO: differentiate OS (Fedora, Ubuntu, etc.)
-	sudo dnf install "$*"
+	if [ ! -z `command -v apt-get` ]; then
+		run_privileged apt-get install "$*"
+	elif [ ! -z `command -v dnf` ]; then
+		run_privileged dnf install "$*"
+	else
+		panic "Unknown Linux distro: could not find a known package manager"
+	fi
 }
 
+# Get the installation path for fonts depending on whether the user is root or not
 get_fonts_dir() {
-	USER=`whoami`
-	if [ "$USER" == "root" ]; then
+	if [ `id -u` -eq 0 ]; then
 		echo "/usr/local/share/fonts"
 	else
 		echo "${HOME}/.local/share/fonts"
 	fi
 }
 
+# Install the given Nerd Fonts
+# install_nerd_fonts <font> [<font> ...]
 install_nerd_fonts() {
 	echo "Installing Nerd Fonts ..."
 	RELEASE_TAG="${1}"
@@ -62,15 +105,29 @@ install_nerd_fonts() {
 
 link_fish_files() {
 	echo "Linking fish configuration files ..."
-	ln -sv ${SCRIPT_DIR}/conf.d/*.fish ${HOME}/.config/fish/conf.d/
-	ln -sv ${SCRIPT_DIR}/functions/*.fish ${HOME}/.config/fish/functions/
-	ln -sv ${SCRIPT_DIR}/fish_* ${HOME}/.config/fish/
+	FISH_CONFIG="${HOME}/.config/fish"
+	mkdir -p "${FISH_CONFIG}"
+	ln -sv ${SCRIPT_DIR}/conf.d/*.fish ${FISH_CONFIG}/conf.d/
+	ln -sv ${SCRIPT_DIR}/functions/*.fish ${FISH_CONFIG}/functions/
+	ln -sv ${SCRIPT_DIR}/fish_* ${FISH_CONFIG}/
 	echo
+}
+
+install_fisher() {
+	# TODO: ask before running script from the internet
+	fish <<EOF
+curl -sL https://raw.githubusercontent.com/jorgebucaran/fisher/main/functions/fisher.fish | source
+fisher update
+EOF
+	echo "Installation finished!"
+	echo "Run 'fish' and then 'tide configure'"
 }
 
 SCRIPT_DIR=`readlink -f $(dirname "${BASH_SOURCE}")`
 
 echo "Checking prerrequisites ..."
+bootstrap_pkg
+install_pkg_if_not_found curl
 install_pkg_if_not_found fish
 install_pkg_if_not_found fontconfig fc-cache
 install_pkg_if_not_found lsd
@@ -86,5 +143,7 @@ install_nerd_fonts "v2.3.3" \
 	UbuntuMono
 
 link_fish_files
+
+install_fisher
 
 echo "Done!"
