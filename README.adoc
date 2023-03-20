@@ -1,18 +1,33 @@
 # fish configuration files
 
+:bash: https://www.gnu.org/software/bash/[bash]
+:cargo: https://doc.rust-lang.org/cargo/[cargo]
 :fish: https://fishshell.com/[fish]
+:fish-ppa: https://launchpad.net/~fish-shell/+archive/ubuntu/release-3[fish PPA]
 :fish-tide-compatibility: https://github.com/IlanCosman/tide/wiki/Fish-version-compatibility[Fish version compatibility]
+:fisher: https://github.com/jorgebucaran/fisher[fisher]
+:git: https://git-scm.com/[Git]
+:lsd: https://github.com/lsd-rs/lsd[lsd]
+:nerd-fonts: https://www.nerdfonts.com/[Nerd Fonts]
 :tide: https://github.com/IlanCosman/tide[tide]
+
+## Features
+
+- Install {fish} and link {fish} configuration files (directories `conf.d` and `functions`)
+- Install {fisher} and selected plugins (see link:fish_plugins[])
+- Install selected {nerd-fonts}
+- Replace `ls` with {lsd}
 
 ## System requirements
 
-Different distributions have different fish versions.
+Different distributions and releases ship with different fish versions.
 
 The biggest source of problems is the compatibility between {fish} and {tide}
 (see {fish-tide-compatibility})
 
-To allow for compatibility with the most systems available, the {tide} version
-has been fixed to 5.5.1.
+To guarantee compatibility with the least possible maintenance effort,
+the latest {fish} version required, and the {fisher} plugins have been fixed
+to the specific versions known to work with the current {fish} version.
 
 Therefore, only the following combinations are supported:
 
@@ -21,23 +36,23 @@ Therefore, only the following combinations are supported:
 
 | OS version
 | fish version
-| tide version
+| Package source
 
 | Fedora 37
 | 3.6.0
-| 5.5.1
+| Official Fedora repository
 
 | Ubuntu 22.04
 | 3.6.0
-| 5.5.1
+| {fish-ppa}
 
 |===
 
 ## Installation
 
 . Install the following prerrequisites:
-* bash
-* Git
+* {bash}
+* {git}
 
 . Clone the repository:
 * Using HTTPS:
@@ -89,7 +104,7 @@ The commands in the following section reflect this.
 +
 [source,bash]
 ----
-podman run -it -v ./:/ws:z -w /ws --rm fedora:37
+podman run -it -v $PWD:/ws:z -w /ws --rm fedora:37
 ----
 
 . Run the install script:
@@ -105,10 +120,10 @@ podman run -it -v ./:/ws:z -w /ws --rm fedora:37
 +
 [source,bash]
 ----
-podman run -it -v ./:/ws:z -w /ws --rm ubuntu:22.04
+podman run -it -v $PWD:/ws:z -w /ws --rm ubuntu:22.04
 ----
 
-. Add the https://launchpad.net/~fish-shell/+archive/ubuntu/release-3[fish PPA]:
+. Add the {fish-ppa} and upgrade to the latest {fish} version:
 +
 [source,bash]
 ----
@@ -119,8 +134,11 @@ sudo apt-add-repository ppa:fish-shell/release-3
 This is needed to install the latest {fish} version that is compatible with
 our selected {tide} version.
 +
-If you hadn't installed {fish} before, you don't have to do anything else.
-If {fish} was already installed, you'll have to upgrade it manually:
+If you hadn't installed {fish} before, you don't have to do anything else,
+since the installation script will already try to install {fish}.
++
+If {fish} was already installed, you'll have to upgrade it manually before
+running the installation script:
 +
 [source,bash]
 ----
@@ -128,7 +146,9 @@ sudo apt-get update
 sudo apt-get upgrade
 ----
 
-. Install `lsd`:
+. Install {lsd}.
+Since {lsd} is not available in the Ubuntu repository, you'll have to install
+it with {cargo}:
 +
 [source,bash]
 ----
