@@ -35,8 +35,26 @@ Therefore, only the following combinations are supported:
 
 ## Installation
 
-Run the bash script:
+. Install the following prerrequisites:
+* bash
+* Git
 
+. Clone the repository:
+* Using HTTPS:
++
+[source,bash]
+----
+git clone https://github.com/jonancm/dotfiles_fish.git
+----
+* Using SSH:
++
+[source,bash]
+----
+git clone git@github.com:jonancm/dotfiles_fish.git
+----
+
+. Run the installation script:
++
 [source,bash]
 ----
 bash install.sh
@@ -100,13 +118,22 @@ sudo apt-add-repository ppa:fish-shell/release-3
 +
 This is needed to install the latest {fish} version that is compatible with
 our selected {tide} version.
++
+If you hadn't installed {fish} before, you don't have to do anything else.
+If {fish} was already installed, you'll have to upgrade it manually:
++
+[source,bash]
+----
+sudo apt-get update
+sudo apt-get upgrade
+----
 
 . Install `lsd`:
 +
 [source,bash]
 ----
 sudo apt-get update
-sudo apt-get install cargo
+sudo apt-get install cargo rustc
 cargo install lsd
 export PATH="$HOME/.cargo/bin:$PATH"
 ----

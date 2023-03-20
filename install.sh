@@ -25,7 +25,9 @@ run_privileged() {
 # Bootstrap package manager
 bootstrap_pkg() {
 	if [ ! -z `command -v apt-get` ]; then
+		echo "Updating apt database ..."
 		run_privileged apt-get update
+		echo
 	fi
 }
 
@@ -135,8 +137,9 @@ EOF
 
 SCRIPT_DIR=`readlink -f $(dirname "${BASH_SOURCE}")`
 
-echo "Checking prerrequisites ..."
 bootstrap_pkg
+
+echo "Checking prerrequisites ..."
 install_pkg_if_not_found curl
 install_pkg_if_not_found fish
 install_pkg_if_not_found fontconfig fc-cache
@@ -155,5 +158,7 @@ install_nerd_fonts "v2.3.3" \
 link_fish_files
 
 install_fisher
+
+echo "To set fish as your default shell, run: chsh -s `command -v fish`"
 
 echo "Done!"
