@@ -88,11 +88,13 @@ install_nerd_fonts() {
 			RELEASE_FILE="${FONT_NAME}.zip"
 			RELEASE_URL="https://github.com/ryanoasis/nerd-fonts/releases/download/${RELEASE_TAG}/${RELEASE_FILE}"
 			DOWNLOADED_FILE="${TMP_DIR}/${RELEASE_FILE}"
-			wget -q "${RELEASE_URL}" -O "${DOWNLOADED_FILE}"
+			echo "Downloading ${RELEASE_URL} ..."
+			curl -L "${RELEASE_URL}" -o "${DOWNLOADED_FILE}"
 			if [ "$?" -ne 0 ]; then
 				echo "Failed to download ${FONT_NAME}"
 			else
 				mkdir -p "${DEST_DIR}"
+				echo "Unpacking ${DOWNLOADED_FILE} ..."
 				unzip -q "${DOWNLOADED_FILE}" '*.ttf' -d "${DEST_DIR}"
 				rm "${DOWNLOADED_FILE}"
 				echo "Installed ${FONT_NAME} -> ${DEST_DIR}"
@@ -145,15 +147,11 @@ install_pkg_if_not_found fish
 install_pkg_if_not_found fontconfig fc-cache
 install_pkg_if_not_found lsd
 install_pkg_if_not_found unzip
-install_pkg_if_not_found wget
 echo
 
 install_nerd_fonts "v2.3.3" \
 	JetBrainsMono \
-	Meslo \
-	RobotoMono \
-	Ubuntu \
-	UbuntuMono
+	Meslo
 
 link_fish_files
 
