@@ -25,8 +25,15 @@ run_privileged() {
 # Bootstrap package manager
 bootstrap_pkg() {
 	if [ ! -z `command -v apt-get` ]; then
-		echo "Updating apt database ..."
-		run_privileged apt-get update
+		read -p "Update apt database? [y/n] " yn
+		case $yn in
+			[yY])
+				echo "Updating apt database ..."
+				run_privileged apt-get update
+				;;
+			*)
+				echo "Will not update apt database"
+		esac
 		echo
 	fi
 }
@@ -39,15 +46,17 @@ install_pkg_if_not_found() {
 	if [ -z "${BIN_NAME}" ]; then
 		BIN_NAME="${PKG_NAME}"
 	fi
+	echo -n "Checking ${PKG_NAME} ... "
 	BIN_PATH=`command -v "${BIN_NAME}"` # https://stackoverflow.com/a/677212
 	if [ -z "${BIN_PATH}" ]; then
-		echo "${PKG_NAME}: ${BIN_NAME} not found. Trying to install ${PKG_NAME} ..."
+		echo "${BIN_NAME} not found"
+		echo "Trying to install ${PKG_NAME} ..."
 		install_pkgs "${PKG_NAME}"
 		if [ $? -ne 0 ]; then
 			panic "Failed to install package: ${PKG_NAME}"
 		fi
 	else
-		echo "${PKG_NAME}: ${BIN_NAME} found at ${BIN_PATH}"
+		echo "${BIN_PATH}"
 	fi
 }
 
@@ -63,22 +72,62 @@ install_pkgs () {
 	fi
 }
 
-# Get the installation path for fonts depending on whether the user is root or not
-get_fonts_dir() {
-	if [ `id -u` -eq 0 ]; then
-		echo "/usr/local/share/fonts"
-	else
-		echo "${HOME}/.local/share/fonts"
-	fi
+declare -A REQUIRES_ROOT
+REQUIRES_ROOT=(
+	["/usr/share/fonts"]=1
+	["/usr/local/share/fonts"]=1
+	["${HOME}/.local/share/fonts"]=0
+)
+
+# Prompt to install Nerd Fonts
+prompt_install_nerd_fonts() {
+	read -p "Install Nerd Fonts? [y/n] " yn
+	case $yn in
+		[yY])
+			OPTION_INDEX=""
+			while [ "$OPTION_INDEX" == "" ]; do
+				echo "Where do you want to install the fonts?"
+				N=0
+				FONT_DIRS=()
+				for FONT_DIR in "${!REQUIRES_ROOT[@]}"; do
+					N=$(($N+1))
+					FONT_DIRS+=($FONT_DIR)
+					if [ ${REQUIRES_ROOT[$FONT_DIR]} -eq 0 ]; then
+						SCOPE="(current user only)"
+					else
+						SCOPE="(all users, requires root)"
+					fi
+					echo " ${N}) ${FONT_DIR} ${SCOPE}"
+				done
+				read -p "Enter an option: " OPTION_NUMBER
+				echo Answer: $OPTION_NUMBER
+				if [ "$OPTION_NUMBER" -lt 1 ] || [ "$OPTION_NUMBER" -gt "$N" ]; then
+					echo "Invalid answer: $OPTION_NUMBER"
+					OPTION_INDEX=""
+				else
+					OPTION_INDEX=$(($OPTION_NUMBER))
+				fi
+			done
+			FONTS_DIR=${FONT_DIRS[$(($OPTION_INDEX-1))]}
+			echo "Will install Nerds Fonts to $FONTS_DIR"
+			install_nerd_fonts "v2.3.3" "$FONTS_DIR" \
+				JetBrainsMono \
+				Meslo
+			;;
+		*)
+			echo "Will not install Nerd Fonts."
+			echo
+			;;
+	esac
 }
 
 # Install the given Nerd Fonts
-# install_nerd_fonts <font> [<font> ...]
+# install_nerd_fonts <version> <fonts_dir> <font> [<font> ...]
 install_nerd_fonts() {
 	echo "Installing Nerd Fonts ..."
 	RELEASE_TAG="${1}"
-	FONTS_LIST="${@:2}"
-	FONTS_DIR=`get_fonts_dir`
+	FONTS_DIR="${2}"
+	FONTS_LIST="${@:3}"
 	TMP_DIR=`mktemp -d`
 	for FONT_NAME in ${FONTS_LIST}; do
 		DEST_DIR="${FONTS_DIR}/nerd-fonts/${FONT_NAME}"
@@ -93,9 +142,11 @@ install_nerd_fonts() {
 			if [ "$?" -ne 0 ]; then
 				echo "Failed to download ${FONT_NAME}"
 			else
-				mkdir -p "${DEST_DIR}"
+				sudo_if_needed ${REQUIRES_ROOT[$FONTS_DIR]} \
+					mkdir -p "${DEST_DIR}"
 				echo "Unpacking ${DOWNLOADED_FILE} ..."
-				unzip -q "${DOWNLOADED_FILE}" '*.ttf' -d "${DEST_DIR}"
+				sudo_if_needed ${REQUIRES_ROOT[$FONTS_DIR]} \
+					unzip -q "${DOWNLOADED_FILE}" '*.ttf' -d "${DEST_DIR}"
 				rm "${DOWNLOADED_FILE}"
 				echo "Installed ${FONT_NAME} -> ${DEST_DIR}"
 			fi
@@ -105,6 +156,16 @@ install_nerd_fonts() {
 	echo "Updating font cache ..."
 	fc-cache -f "${FONTS_DIR}"
 	echo
+}
+
+sudo_if_needed() {
+	SUDO_NEEDED="${1}"
+	COMMAND="${@:2}"
+	if [ $SUDO_NEEDED -eq 1 ]; then
+		run_privileged ${COMMAND}
+	else
+		${COMMAND}
+	fi
 }
 
 link_fish_files() {
@@ -128,13 +189,27 @@ check_version() {
 
 install_fisher() {
 	check_version fish 3.6.0
-	# TODO: ask before running script from the internet
-	fish <<EOF
-curl -sL https://raw.githubusercontent.com/jorgebucaran/fisher/main/functions/fisher.fish | source
+	FISH_SCRIPT="https://raw.githubusercontent.com/jorgebucaran/fisher/main/functions/fisher.fish"
+	echo "Installing fisher ..."
+	echo "I need to fetch and run the script ${FISH_SCRIPT}"
+	echo "I'm about to download a script from the internet and pipe it through fish!"
+	echo "This can have serious security implications!"
+	read -p "Would you like to proceed? [y/n] " yn
+	case $yn in
+		[yY])
+			fish <<EOF
+curl -sL ${FISH_SCRIPT} | source
 fisher update
 EOF
-	echo "Installation finished!"
-	echo "Run 'fish' and then 'tide configure'"
+			echo "Installation finished!"
+			echo
+			echo "To start a fish session, run: fish"
+			echo "To configure the tide prompt, run: tide configure"
+			;;
+		*)
+			echo "Please install fisher manually."
+			;;
+	esac
 }
 
 SCRIPT_DIR=`readlink -f $(dirname "${BASH_SOURCE}")`
@@ -149,9 +224,7 @@ install_pkg_if_not_found lsd
 install_pkg_if_not_found unzip
 echo
 
-install_nerd_fonts "v2.3.3" \
-	JetBrainsMono \
-	Meslo
+prompt_install_nerd_fonts
 
 link_fish_files
 
@@ -159,4 +232,5 @@ install_fisher
 
 echo "To set fish as your default shell, run: chsh -s `command -v fish`"
 
+echo
 echo "Done!"
