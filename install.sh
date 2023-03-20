@@ -100,7 +100,6 @@ prompt_install_nerd_fonts() {
 					echo " ${N}) ${FONT_DIR} ${SCOPE}"
 				done
 				read -p "Enter an option: " OPTION_NUMBER
-				echo Answer: $OPTION_NUMBER
 				if [ "$OPTION_NUMBER" -lt 1 ] || [ "$OPTION_NUMBER" -gt "$N" ]; then
 					echo "Invalid answer: $OPTION_NUMBER"
 					OPTION_INDEX=""
@@ -128,7 +127,6 @@ install_nerd_fonts() {
 	RELEASE_TAG="${1}"
 	FONTS_DIR="${2}"
 	FONTS_LIST="${@:3}"
-	TMP_DIR=`mktemp -d`
 	for FONT_NAME in ${FONTS_LIST}; do
 		DEST_DIR="${FONTS_DIR}/nerd-fonts/${FONT_NAME}"
 		if [ -e "${DEST_DIR}" ]; then
@@ -136,9 +134,9 @@ install_nerd_fonts() {
 		else
 			RELEASE_FILE="${FONT_NAME}.zip"
 			RELEASE_URL="https://github.com/ryanoasis/nerd-fonts/releases/download/${RELEASE_TAG}/${RELEASE_FILE}"
-			DOWNLOADED_FILE="${TMP_DIR}/${RELEASE_FILE}"
+			DOWNLOADED_FILE="/tmp/${RELEASE_FILE}"
 			echo "Downloading ${RELEASE_URL} ..."
-			curl -L "${RELEASE_URL}" -o "${DOWNLOADED_FILE}"
+			wget -c "${RELEASE_URL}" -O "${DOWNLOADED_FILE}"
 			if [ "$?" -ne 0 ]; then
 				echo "Failed to download ${FONT_NAME}"
 			else
@@ -146,8 +144,8 @@ install_nerd_fonts() {
 					mkdir -p "${DEST_DIR}"
 				echo "Unpacking ${DOWNLOADED_FILE} ..."
 				sudo_if_needed ${REQUIRES_ROOT[$FONTS_DIR]} \
-					unzip -q "${DOWNLOADED_FILE}" '*.ttf' -d "${DEST_DIR}"
-				rm "${DOWNLOADED_FILE}"
+					unzip "${DOWNLOADED_FILE}" '*.ttf' -d "${DEST_DIR}"
+				rm -iv "${DOWNLOADED_FILE}"
 				echo "Installed ${FONT_NAME} -> ${DEST_DIR}"
 			fi
 		fi
@@ -198,7 +196,7 @@ install_fisher() {
 	case $yn in
 		[yY])
 			fish <<EOF
-curl -sL ${FISH_SCRIPT} | source
+wget -q -O - ${FISH_SCRIPT} | source
 fisher update
 EOF
 			echo "Installation finished!"
@@ -208,6 +206,7 @@ EOF
 			;;
 		*)
 			echo "Please install fisher manually."
+			echo
 			;;
 	esac
 }
@@ -217,7 +216,7 @@ SCRIPT_DIR=`readlink -f $(dirname "${BASH_SOURCE}")`
 bootstrap_pkg
 
 echo "Checking prerrequisites ..."
-install_pkg_if_not_found curl
+install_pkg_if_not_found wget
 install_pkg_if_not_found fish
 install_pkg_if_not_found fontconfig fc-cache
 install_pkg_if_not_found lsd
