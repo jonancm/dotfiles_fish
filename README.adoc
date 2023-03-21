@@ -9,6 +9,7 @@
 :fisher: https://github.com/jorgebucaran/fisher[fisher]
 :git: https://git-scm.com/[Git]
 :lsd: https://github.com/lsd-rs/lsd[lsd]
+:macports: https://www.macports.org/[MacPorts]
 :nerd-fonts: https://www.nerdfonts.com/[Nerd Fonts]
 :opendoas: https://github.com/Duncaen/OpenDoas[OpenDoas]
 :pleaser: https://crates.io/crates/pleaser[pleaser]
@@ -49,6 +50,10 @@ Therefore, only the following combinations are supported:
 | Ubuntu 22.04
 | 3.6.0
 | {fish-ppa}
+
+| macOS 10.15 Catalina
+| 3.6.0
+| {macports}
 
 |===
 
@@ -98,7 +103,7 @@ Please check the <<testing>> section for distribution-specific prerrequisites.
 
 ### Prerrequisites
 
-* https://podman.io/[Podman]
+* https://podman.io/[Podman] or https://www.docker.com/[Docker]
 
 [NOTE]
 ====
@@ -112,9 +117,18 @@ The commands in the following section reflect this.
 
 . Start the container:
 +
+* with Podman:
++
 [source,bash]
 ----
 podman run -it -v $PWD:/ws:z -w /ws --rm fedora:37
+----
++
+* with Docker:
++
+[source,bash]
+----
+docker run -it -v $PWD:/ws -w /ws --rm fedora:37
 ----
 
 . Run the install script:
@@ -128,9 +142,18 @@ podman run -it -v $PWD:/ws:z -w /ws --rm fedora:37
 
 . Start the container:
 +
+* with Podman:
++
 [source,bash]
 ----
 podman run -it -v $PWD:/ws:z -w /ws --rm ubuntu:22.04
+----
++
+* with Docker:
++
+[source,bash]
+----
+docker run -it -v $PWD:/ws -w /ws --rm ubuntu:22.04
 ----
 
 . Add the {fish-ppa} and upgrade to the latest {fish} version:

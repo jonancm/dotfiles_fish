@@ -24,8 +24,8 @@ run_privileged() {
 	fi
 }
 
-# Bootstrap package manager
-bootstrap_pkg() {
+# Update package database for package managers that need it
+update_pkg_db() {
 	if [ ! -z `command -v apt-get` ]; then
 		read -p "Update apt database? [y/n] " yn
 		case $yn in
@@ -37,10 +37,21 @@ bootstrap_pkg() {
 				echo "Will not update apt database"
 		esac
 		echo
+	elif [ ! -z `command -v port` ]; then
+		read -p "Update port database? [y/n] " yn
+		case $yn in
+			[yY])
+				echo "Updating port database ..."
+				run_privileged port -v selfupdate
+				;;
+			*)
+				echo "Will not update port database"
+		esac
+		echo
 	fi
 }
 
-# Install a package if the given executable isn't found
+# Install package <pkg> if the executable <exe> cannot be found in the PATH
 # install_pkg_if_not_found <pkg> <exe>
 install_pkg_if_not_found() {
 	PKG_NAME="${1}"
@@ -66,20 +77,28 @@ install_pkg_if_not_found() {
 # install_pkgs <pkg> [<pkg> ...]
 install_pkgs () {
 	if [ ! -z `command -v apt-get` ]; then
-		run_privileged apt-get install "$*"
+		run_privileged apt-get install $*
 	elif [ ! -z `command -v dnf` ]; then
-		run_privileged dnf install "$*"
+		run_privileged dnf install $*
+	elif [ ! -z `command -v port` ]; then
+		run_privileged port -v install $*
 	else
 		panic "could not find a known package manager"
 	fi
 }
 
-declare -A REQUIRES_ROOT
-REQUIRES_ROOT=(
-	["/usr/share/fonts"]=1
-	["/usr/local/share/fonts"]=1
-	["${HOME}/.local/share/fonts"]=0
-)
+case `uname` in
+	"Darwin")
+		;;
+	"Linux")
+		declare -A REQUIRES_ROOT
+		REQUIRES_ROOT=(
+			["/usr/share/fonts"]=1
+			["/usr/local/share/fonts"]=1
+			["${HOME}/.local/share/fonts"]=0
+		)
+		;;
+esac
 
 # Prompt to install Nerd Fonts
 prompt_install_nerd_fonts() {
@@ -171,7 +190,7 @@ sudo_if_needed() {
 link_fish_files() {
 	echo "Linking fish configuration files ..."
 	FISH_CONFIG="${HOME}/.config/fish"
-	mkdir -p "${FISH_CONFIG}"
+	mkdir -pv ${FISH_CONFIG}/{conf.d,functions}
 	ln -sv ${SCRIPT_DIR}/conf.d/*.fish ${FISH_CONFIG}/conf.d/
 	ln -sv ${SCRIPT_DIR}/functions/*.fish ${FISH_CONFIG}/functions/
 	ln -sv ${SCRIPT_DIR}/fish_* ${FISH_CONFIG}/
@@ -207,31 +226,42 @@ EOF
 			echo "To configure the tide prompt, run: tide configure"
 			;;
 		*)
-			echo "Please install fisher manually."
+			echo "Please install fisher manually:"
+			echo "    fish"
+			echo "    wget -q -O - ${FISH_SCRIPT} | source"
+			echo "    fisher update"
+			echo "Optionally:"
+			echo "    tide configure"
 			echo
 			;;
 	esac
 }
 
-SCRIPT_DIR=`readlink -f $(dirname "${BASH_SOURCE}")`
+check_prerrequisites() {
+	echo "Checking prerrequisites ..."
+	install_pkg_if_not_found curl # fisher uses curl and we can't change this fact
+	install_pkg_if_not_found wget # we prefer wget to be able to resume downloads
+	install_pkg_if_not_found fish
+	install_pkg_if_not_found fontconfig fc-cache
+	install_pkg_if_not_found lsd
+	install_pkg_if_not_found unzip
+	case `uname` in
+		"Darwin")
+			install_pkg_if_not_found realpath
+			;;
+		"Linux")
+			install_pkg_if_not_found coreutils realpath
+			;;
+	esac
+	echo
+}
 
-bootstrap_pkg
-
-echo "Checking prerrequisites ..."
-install_pkg_if_not_found wget
-install_pkg_if_not_found fish
-install_pkg_if_not_found fontconfig fc-cache
-install_pkg_if_not_found lsd
-install_pkg_if_not_found unzip
-echo
-
+update_pkg_db
+check_prerrequisites
 prompt_install_nerd_fonts
-
+SCRIPT_DIR=`dirname $(realpath "${BASH_SOURCE}")`
 link_fish_files
-
 install_fisher
-
 echo "To set fish as your default shell, run: chsh -s `command -v fish`"
-
 echo
 echo "Done!"
