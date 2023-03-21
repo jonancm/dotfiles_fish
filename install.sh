@@ -2,7 +2,7 @@
 
 # Print error and exit
 panic() {
-	echo "$*" >&2
+	echo "Error: $*" >&2
 	exit 1
 }
 
@@ -12,12 +12,14 @@ run_privileged() {
 	if [ `id -u` -eq 0 ]; then
 		$*
 	else
-		if [ ! -z `command -v sudo` ]; then
-			sudo $*
-		elif [ ! -z `command -v doas` ]; then
+		if [ ! -z `command -v doas` ]; then
 			doas $*
+		elif [ ! -z `command -v please` ]; then
+			please $*
+		elif [ ! -z `command -v sudo` ]; then
+			sudo $*
 		else
-			panic "Unable to run command as root: no doas, sudo have been found"
+			panic "failed to run as root: could not find any of: doas, please, sudo"
 		fi
 	fi
 }
@@ -53,7 +55,7 @@ install_pkg_if_not_found() {
 		echo "Trying to install ${PKG_NAME} ..."
 		install_pkgs "${PKG_NAME}"
 		if [ $? -ne 0 ]; then
-			panic "Failed to install package: ${PKG_NAME}"
+			panic "failed to install package: ${PKG_NAME}"
 		fi
 	else
 		echo "${BIN_PATH}"
@@ -68,7 +70,7 @@ install_pkgs () {
 	elif [ ! -z `command -v dnf` ]; then
 		run_privileged dnf install "$*"
 	else
-		panic "Unknown Linux distro: could not find a known package manager"
+		panic "could not find a known package manager"
 	fi
 }
 
@@ -181,7 +183,7 @@ check_version() {
 	EXPECTED_VERSION="${2}"
 	VERSION=`${BIN_NAME} --version | awk '{print($3)}'` # FIXME: awk expression will only work with fish
 	if [ "${VERSION}" != "${EXPECTED_VERSION}" ]; then
-		panic "Error: expected ${BIN_NAME} version ${EXPECTED_VERSION}, got ${VERSION} instead!"
+		panic "expected ${BIN_NAME} version ${EXPECTED_VERSION}, got ${VERSION} instead!"
 	fi
 }
 

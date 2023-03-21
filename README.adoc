@@ -2,6 +2,7 @@
 
 :bash: https://www.gnu.org/software/bash/[bash]
 :cargo: https://doc.rust-lang.org/cargo/[cargo]
+:doas: https://github.com/slicer69/doas/[doas]
 :fish: https://fishshell.com/[fish]
 :fish-ppa: https://launchpad.net/~fish-shell/+archive/ubuntu/release-3[fish PPA]
 :fish-tide-compatibility: https://github.com/IlanCosman/tide/wiki/Fish-version-compatibility[Fish version compatibility]
@@ -9,6 +10,9 @@
 :git: https://git-scm.com/[Git]
 :lsd: https://github.com/lsd-rs/lsd[lsd]
 :nerd-fonts: https://www.nerdfonts.com/[Nerd Fonts]
+:opendoas: https://github.com/Duncaen/OpenDoas[OpenDoas]
+:pleaser: https://crates.io/crates/pleaser[pleaser]
+:sudo: https://www.sudo.ws/[sudo]
 :tide: https://github.com/IlanCosman/tide[tide]
 
 ## Features
@@ -51,8 +55,14 @@ Therefore, only the following combinations are supported:
 ## Installation
 
 . Install the following prerrequisites:
-* {bash}
-* {git}
++
+ * {bash}
+ * {git}
++
+If you're not running the script as root, you'll also need one of these:
+** {sudo}
+** {doas} or {opendoas}
+** {pleaser}
 
 . Clone the repository:
 * Using HTTPS:
