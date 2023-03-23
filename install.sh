@@ -70,7 +70,8 @@ bootstrap_debian() {
 	# Uninstall fish if it's already installed
 	uninstall_fish
 	# Add PPA to install latest fish version
-	install_pkgs curl gpg
+	install_pkg_if_not_found curl
+	install_pkg_if_not_found gpg
 	echo 'deb http://download.opensuse.org/repositories/shells:/fish:/release:/3/Debian_11/ /' | run_privileged tee /etc/apt/sources.list.d/shells:fish:release:3.list
 	curl -fsSL https://download.opensuse.org/repositories/shells:fish:release:3/Debian_11/Release.key | gpg --dearmor | run_privileged tee /etc/apt/trusted.gpg.d/shells_fish_release_3.gpg > /dev/null
 	# Install lsd using cargo
