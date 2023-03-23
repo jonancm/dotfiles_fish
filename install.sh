@@ -34,9 +34,9 @@ do_nothing() {
 
 uninstall_pkgs() {
 	if command -v apt-get &> /dev/null; then
-		run_privileged apt-get remove $*
+		run_privileged apt-get remove -y $*
 	elif command -v dnf &> /dev/null; then
-		run_privileged dnf remove $*
+		run_privileged dnf remove -y $*
 	elif command -v port &> /dev/null; then
 		run_privileged port -v uninstall $*
 	else
@@ -70,11 +70,11 @@ bootstrap_debian() {
 	# Uninstall fish if it's already installed
 	uninstall_fish
 	# Add PPA to install latest fish version
-	run_privileged apt-get install curl gpg
+	install_pkgs curl gpg
 	echo 'deb http://download.opensuse.org/repositories/shells:/fish:/release:/3/Debian_11/ /' | run_privileged tee /etc/apt/sources.list.d/shells:fish:release:3.list
 	curl -fsSL https://download.opensuse.org/repositories/shells:fish:release:3/Debian_11/Release.key | gpg --dearmor | run_privileged tee /etc/apt/trusted.gpg.d/shells_fish_release_3.gpg > /dev/null
 	# Install lsd using cargo
-	run_privileged apt-get install cargo rustc
+	install_pkgs cargo rustc
 	cargo install lsd --version 0.18.0 # last crate version compatible with Debian's outdated cargo version
 	export PATH="$HOME/.cargo/bin:$PATH"
 }
@@ -84,11 +84,11 @@ bootstrap_ubuntu() {
 	# Uninstall fish if it's already installed
 	uninstall_fish
 	# Add PPA to install latest fish version
-	run_privileged apt-get install software-properties-common
+	install_pkgs software-properties-common
 	run_privileged apt-add-repository ppa:fish-shell/release-3
 	run_privileged apt-get update
 	# Install lsd using cargo
-	run_privileged apt-get install cargo rustc
+	install_pkgs cargo rustc
 	cargo install lsd
 	export PATH="$HOME/.cargo/bin:$PATH"
 }
@@ -171,9 +171,9 @@ install_pkg_if_not_found() {
 # install_pkgs <pkg> [<pkg> ...]
 install_pkgs () {
 	if command -v apt-get &> /dev/null; then
-		run_privileged apt-get install $*
+		run_privileged apt-get install -y $*
 	elif command -v dnf &> /dev/null; then
-		run_privileged dnf install $*
+		run_privileged dnf install -y $*
 	elif command -v port &> /dev/null; then
 		run_privileged port -v install $*
 	else
