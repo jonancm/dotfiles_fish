@@ -29,6 +29,10 @@ print_info() {
 	echo -ne "${BLUE}$*${NOCOLOR}"
 }
 
+print_tip() {
+	echo -ne "${ORANGE}$*${NOCOLOR}"
+}
+
 print_title() {
 	echo -ne "${LBLUE}$*${NOCOLOR}"
 }
@@ -425,8 +429,10 @@ wget -q -O - ${FISH_SCRIPT} | source
 fisher update
 EOF
 			echo
-			print_caution "To start a fish session, run: fish\n"
-			print_caution "To configure the tide prompt, run: tide configure\n"
+			print_tip "To start a fish session, run:\n"
+			print_tip "    fish\n"
+			print_tip "To configure the tide prompt, run:\n"
+			print_tip "    tide configure\n"
 			;;
 		*)
 			echo
@@ -473,9 +479,11 @@ prompt_install_nerd_fonts
 link_fish_files
 install_fisher
 
-if command -v chsh &> /dev/null; then
-	print_caution "To set fish as your default shell, run: chsh -s `command -v fish`\n"
-	echo
+print_tip "To set fish as your default shell, run:\n"
+print_tip "    chsh -s `command -v fish`\n"
+if ! command -v chsh &> /dev/null; then
+	print_warning "chsh is not installed\n"
 fi
+echo
 
 print_success "Done!\n"
