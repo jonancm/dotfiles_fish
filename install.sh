@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 DESIRED_FISH_VERSION="3.6.0"
 
 # Print error and exit
@@ -14,11 +16,11 @@ run_privileged() {
 	if [ `id -u` -eq 0 ]; then
 		$*
 	else
-		if [ ! -z `command -v doas` ]; then
+		if command -v doas &> /dev/null; then
 			doas $*
-		elif [ ! -z `command -v please` ]; then
+		elif command -v please &> /dev/null; then
 			please $*
-		elif [ ! -z `command -v sudo` ]; then
+		elif command -v sudo &> /dev/null; then
 			sudo $*
 		else
 			panic "failed to run as root: could not find any of: doas, please, sudo"
@@ -31,11 +33,11 @@ do_nothing() {
 }
 
 uninstall_pkgs() {
-	if [ ! -z `command -v apt-get` ]; then
+	if command -v apt-get &> /dev/null; then
 		run_privileged apt-get remove $*
-	elif [ ! -z `command -v dnf` ]; then
+	elif command -v dnf &> /dev/null; then
 		run_privileged dnf remove $*
-	elif [ ! -z `command -v port` ]; then
+	elif command -v port &> /dev/null; then
 		run_privileged port -v uninstall $*
 	else
 		panic "could not find a known package manager"
@@ -43,7 +45,7 @@ uninstall_pkgs() {
 }
 
 uninstall_fish() {
-	if [ ! -z `command -v fish` ]; then
+	if command -v fish &> /dev/null; then
 		INSTALLED_VERSION=`get_version fish`
 		if [ "${INSTALLED_VERSION}" != "${DESIRED_FISH_VERSION}" ]; then
 			uninstall_pkgs fish
@@ -152,8 +154,7 @@ install_pkg_if_not_found() {
 		BIN_NAME="${PKG_NAME}"
 	fi
 	echo -n "Checking ${PKG_NAME} ... "
-	BIN_PATH=`command -v "${BIN_NAME}"` # https://stackoverflow.com/a/677212
-	if [ -z "${BIN_PATH}" ]; then
+	if ! command -v "${BIN_NAME}" &> /dev/null; then
 		echo "${BIN_NAME} not found"
 		echo "Trying to install ${PKG_NAME} ..."
 		install_pkgs "${PKG_NAME}"
@@ -161,6 +162,7 @@ install_pkg_if_not_found() {
 			panic "failed to install package: ${PKG_NAME}"
 		fi
 	else
+		BIN_PATH=`command -v "${BIN_NAME}"`
 		echo "${BIN_PATH}"
 	fi
 }
@@ -168,11 +170,11 @@ install_pkg_if_not_found() {
 # Install packages
 # install_pkgs <pkg> [<pkg> ...]
 install_pkgs () {
-	if [ ! -z `command -v apt-get` ]; then
+	if command -v apt-get &> /dev/null; then
 		run_privileged apt-get install $*
-	elif [ ! -z `command -v dnf` ]; then
+	elif command -v dnf &> /dev/null; then
 		run_privileged dnf install $*
-	elif [ ! -z `command -v port` ]; then
+	elif command -v port &> /dev/null; then
 		run_privileged port -v install $*
 	else
 		panic "could not find a known package manager"
@@ -285,9 +287,11 @@ link_fish_files() {
 	echo "Linking fish configuration files ..."
 	FISH_CONFIG="${HOME}/.config/fish"
 	mkdir -pv ${FISH_CONFIG}/{conf.d,functions}
+	set +e
 	ln -sv ${SCRIPT_DIR}/conf.d/*.fish ${FISH_CONFIG}/conf.d/
 	ln -sv ${SCRIPT_DIR}/functions/*.fish ${FISH_CONFIG}/functions/
 	ln -sv ${SCRIPT_DIR}/fish_* ${FISH_CONFIG}/
+	set -e
 	echo
 }
 
