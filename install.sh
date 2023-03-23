@@ -213,12 +213,32 @@ bootstrap_os() {
 	print_success "${OS_NAME} ${OS_VERSION}\n"
 
 	declare -A HANDLERS
+	HANDLERS[debian]=bootstrap_debian
 	HANDLERS[debian:11]=bootstrap_debian
+	HANDLERS[fedora]=bootstrap_fedora
 	HANDLERS[fedora:37]=bootstrap_fedora
+	HANDLERS[darwin]=bootstrap_macos
 	HANDLERS[darwin:10.15]=bootstrap_macos
+	HANDLERS[ubuntu]=bootstrap_ubuntu
 	HANDLERS[ubuntu:22.04]=bootstrap_ubuntu
 
-	${HANDLERS[$OS_LABEL:$OS_VERSION]}
+	BOOTSTRAP_HANDLER=${HANDLERS[$OS_LABEL:$OS_VERSION]}
+	if [ -z "${BOOTSTRAP_HANDLER}" ]; then
+		print_warning "${OS_NAME} ${OS_VERSION} is not officially supported and hasn't been tested.\n"
+		print_caution "If you're lucky, things might still work ... but there's no guarantee.\n"
+		print_caution "If you're unlucky, you might break your system.\n"
+		read -p "Do you want to try nonetheless? [y/n] " yn
+		case $yn in
+			[yY])
+				BOOTSTRAP_HANDLER=${HANDLERS[$OS_LABEL]}
+				;;
+			*)
+				print_failure "Exiting ...\n"
+				exit
+				;;
+		esac
+	fi
+	${BOOTSTRAP_HANDLER}
 	echo
 }
 
