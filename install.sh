@@ -1,5 +1,7 @@
 #!/bin/bash
 
+DESIRED_FISH_VERSION="3.6.0"
+
 # Print error and exit
 panic() {
 	echo "Error: $*" >&2
@@ -28,6 +30,27 @@ do_nothing() {
 	echo > /dev/null
 }
 
+uninstall_pkgs() {
+	if [ ! -z `command -v apt-get` ]; then
+		run_privileged apt-get remove $*
+	elif [ ! -z `command -v dnf` ]; then
+		run_privileged dnf remove $*
+	elif [ ! -z `command -v port` ]; then
+		run_privileged port -v uninstall $*
+	else
+		panic "could not find a known package manager"
+	fi
+}
+
+uninstall_fish() {
+	if [ ! -z `command -v fish` ]; then
+		INSTALLED_VERSION=`get_version fish`
+		if [ "${INSTALLED_VERSION}" != "${DESIRED_FISH_VERSION}" ]; then
+			uninstall_pkgs fish
+		fi
+	fi
+}
+
 bootstrap_apt() {
 	read -p "Update apt database? [y/n] " yn
 	case $yn in
@@ -43,7 +66,7 @@ bootstrap_apt() {
 bootstrap_debian() {
 	bootstrap_apt
 	# Uninstall fish if it's already installed
-	run_privileged apt-get remove fish
+	uninstall_fish
 	# Add PPA to install latest fish version
 	run_privileged apt-get install curl gpg
 	echo 'deb http://download.opensuse.org/repositories/shells:/fish:/release:/3/Debian_11/ /' | run_privileged tee /etc/apt/sources.list.d/shells:fish:release:3.list
@@ -57,7 +80,7 @@ bootstrap_debian() {
 bootstrap_ubuntu() {
 	bootstrap_apt
 	# Uninstall fish if it's already installed
-	run_privileged apt-get remove fish
+	uninstall_fish
 	# Add PPA to install latest fish version
 	run_privileged apt-get install software-properties-common
 	run_privileged apt-add-repository ppa:fish-shell/release-3
@@ -68,7 +91,7 @@ bootstrap_ubuntu() {
 	export PATH="$HOME/.cargo/bin:$PATH"
 }
 
-bootstrap_macos() {
+bootstrap_macports() {
 	read -p "Update port database? [y/n] " yn
 	case $yn in
 		[yY])
@@ -78,6 +101,11 @@ bootstrap_macos() {
 		*)
 			echo "Will not update port database"
 	esac
+}
+
+bootstrap_macos() {
+	bootstrap_macports
+	uninstall_fish
 }
 
 bootstrap_os() {
@@ -261,17 +289,23 @@ link_fish_files() {
 	echo
 }
 
-check_version() {
+get_version() {
 	BIN_NAME="${1}"
 	EXPECTED_VERSION="${2}"
-	VERSION=`${BIN_NAME} --version | awk '{print($3)}'` # FIXME: awk expression will only work with fish
+	${BIN_NAME} --version | awk '{print($3)}' # FIXME: awk expression will only work with fish
+}
+
+ensure_version() {
+	BIN_NAME="${1}"
+	EXPECTED_VERSION="${2}"
+	VERSION=`get_version ${BIN_NAME}`
 	if [ "${VERSION}" != "${EXPECTED_VERSION}" ]; then
 		panic "expected ${BIN_NAME} version ${EXPECTED_VERSION}, got ${VERSION} instead!"
 	fi
 }
 
 install_fisher() {
-	check_version fish 3.6.0
+	ensure_version fish ${DESIRED_FISH_VERSION}
 	FISH_SCRIPT="https://raw.githubusercontent.com/jorgebucaran/fisher/main/functions/fisher.fish"
 	echo "Installing fisher ..."
 	echo "I need to fetch and run the script ${FISH_SCRIPT}"
