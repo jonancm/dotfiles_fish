@@ -24,31 +24,95 @@ run_privileged() {
 	fi
 }
 
-# Update package database for package managers that need it
-update_pkg_db() {
-	if [ ! -z `command -v apt-get` ]; then
-		read -p "Update apt database? [y/n] " yn
-		case $yn in
-			[yY])
-				echo "Updating apt database ..."
-				run_privileged apt-get update
-				;;
-			*)
-				echo "Will not update apt database"
-		esac
-		echo
-	elif [ ! -z `command -v port` ]; then
-		read -p "Update port database? [y/n] " yn
-		case $yn in
-			[yY])
-				echo "Updating port database ..."
-				run_privileged port -v selfupdate
-				;;
-			*)
-				echo "Will not update port database"
-		esac
-		echo
-	fi
+do_nothing() {
+	echo > /dev/null
+}
+
+bootstrap_apt() {
+	read -p "Update apt database? [y/n] " yn
+	case $yn in
+		[yY])
+			echo "Updating apt database ..."
+			run_privileged apt-get update
+			;;
+		*)
+			echo "Will not update apt database"
+	esac
+}
+
+bootstrap_debian() {
+	bootstrap_apt
+	# Uninstall fish if it's already installed
+	run_privileged apt-get remove fish
+	# Add PPA to install latest fish version
+	run_privileged apt-get install curl gpg
+	echo 'deb http://download.opensuse.org/repositories/shells:/fish:/release:/3/Debian_11/ /' | run_privileged tee /etc/apt/sources.list.d/shells:fish:release:3.list
+	curl -fsSL https://download.opensuse.org/repositories/shells:fish:release:3/Debian_11/Release.key | gpg --dearmor | run_privileged tee /etc/apt/trusted.gpg.d/shells_fish_release_3.gpg > /dev/null
+	# Install lsd using cargo
+	run_privileged apt-get install cargo rustc
+	cargo install lsd --version 0.18.0 # last crate version compatible with Debian's outdated cargo version
+	export PATH="$HOME/.cargo/bin:$PATH"
+}
+
+bootstrap_ubuntu() {
+	bootstrap_apt
+	# Uninstall fish if it's already installed
+	run_privileged apt-get remove fish
+	# Add PPA to install latest fish version
+	run_privileged apt-get install software-properties-common
+	run_privileged apt-add-repository ppa:fish-shell/release-3
+	run_privileged apt-get update
+	# Install lsd using cargo
+	run_privileged apt-get install cargo rustc
+	cargo install lsd
+	export PATH="$HOME/.cargo/bin:$PATH"
+}
+
+bootstrap_macos() {
+	read -p "Update port database? [y/n] " yn
+	case $yn in
+		[yY])
+			echo "Updating port database ..."
+			run_privileged port -v selfupdate
+			;;
+		*)
+			echo "Will not update port database"
+	esac
+}
+
+bootstrap_os() {
+	SUPPORTED_PLATFORMS=(
+		"Debian 11"
+		"Fedora 37"
+		"macOS 10+"
+		"Ubuntu 22.04"
+	)
+	HANDLERS=(
+		bootstrap_debian
+		do_nothing
+		bootstrap_macos
+		bootstrap_ubuntu
+	)
+	OPTION_INDEX=""
+	while [ "$OPTION_INDEX" == "" ]; do
+		echo "What operating system / distribution are you using?"
+		N=0
+		for PLATFORM in "${SUPPORTED_PLATFORMS[@]}"; do
+			N=$(($N+1))
+			echo " ${N}) ${PLATFORM}"
+		done
+		read -p "Enter an option: " OPTION_NUMBER
+		if [ "$OPTION_NUMBER" -lt 1 ] || [ "$OPTION_NUMBER" -gt "$N" ]; then
+			echo "Invalid answer: $OPTION_NUMBER"
+			OPTION_INDEX=""
+		else
+			OPTION_INDEX=$(($OPTION_NUMBER-1))
+		fi
+	done
+	PLATFORM=${SUPPORTED_PLATFORMS[$OPTION_INDEX]}
+	echo "Executing bootstrap process for ${PLATFORM} ..."
+	${HANDLERS[$OPTION_INDEX]}
+	echo
 }
 
 # Install package <pkg> if the executable <exe> cannot be found in the PATH
@@ -256,7 +320,7 @@ check_prerrequisites() {
 	echo
 }
 
-update_pkg_db
+bootstrap_os
 check_prerrequisites
 prompt_install_nerd_fonts
 SCRIPT_DIR=`dirname $(realpath "${BASH_SOURCE}")`

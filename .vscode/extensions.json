@@ -1,0 +1,7 @@
+{
+	"recommendations": [
+		"asciidoctor.asciidoctor-vscode",
+		"bmalehorn.vscode-fish",
+		"editorconfig.editorconfig"
+	]
+}

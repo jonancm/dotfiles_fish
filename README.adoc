@@ -4,6 +4,7 @@
 :cargo: https://doc.rust-lang.org/cargo/[cargo]
 :doas: https://github.com/slicer69/doas/[doas]
 :fish: https://fishshell.com/[fish]
+:fish-obs: https://software.opensuse.org/download.html?project=shells%3Afish%3Arelease%3A3&package=fish[openSUSE Build Service]
 :fish-ppa: https://launchpad.net/~fish-shell/+archive/ubuntu/release-3[fish PPA]
 :fish-tide-compatibility: https://github.com/IlanCosman/tide/wiki/Fish-version-compatibility[Fish version compatibility]
 :fisher: https://github.com/jorgebucaran/fisher[fisher]
@@ -39,9 +40,13 @@ Therefore, only the following combinations are supported:
 [cols="3*",options="header"]
 |===
 
-| OS version
+| Platform/version
 | fish version
 | Package source
+
+| Debian 11
+| 3.6.0
+| {fish-obs}
 
 | Fedora 37
 | 3.6.0
@@ -90,14 +95,6 @@ git clone git@github.com:jonancm/dotfiles_fish.git
 bash install.sh
 ----
 
-[NOTE]
-====
-Some distributions might require some previous setup steps before you can
-run the install script.
-
-Please check the <<testing>> section for distribution-specific prerrequisites.
-====
-
 [[testing]]
 ## Testing
 
@@ -107,94 +104,35 @@ Please check the <<testing>> section for distribution-specific prerrequisites.
 
 [NOTE]
 ====
-When using Podman with SELinux, you must
+When using Podman with SELinux (e.g. on Fedora), you must
 https://devops.stackexchange.com/a/11277[add `:z` when you mount a volume].
 
 The commands in the following section reflect this.
 ====
 
-### Fedora 37
+### Starting the container
 
-. Start the container:
-+
-* with Podman:
-+
-[source,bash]
-----
-podman run -it -v $PWD:/ws:z -w /ws --rm fedora:37
-----
-+
-* with Docker:
-+
-[source,bash]
-----
-docker run -it -v $PWD:/ws -w /ws --rm fedora:37
-----
+[cols="3*",options="header"]
+|===
 
-. Run the install script:
-+
-[source,bash]
-----
-./install.sh
-----
+| Platform/version
+| Podman
+| Docker
 
-### Ubuntu 22.04
+| Debian 11
+| `podman run -it -v $PWD:/ws:z -w /ws --rm debian:11`
+| `docker run -it -v $PWD:/ws -w /ws --rm debian:11`
 
-. Start the container:
-+
-* with Podman:
-+
-[source,bash]
-----
-podman run -it -v $PWD:/ws:z -w /ws --rm ubuntu:22.04
-----
-+
-* with Docker:
-+
-[source,bash]
-----
-docker run -it -v $PWD:/ws -w /ws --rm ubuntu:22.04
-----
+| Fedora 37
+| `podman run -it -v $PWD:/ws:z -w /ws --rm fedora:37`
+| `docker run -it -v $PWD:/ws -w /ws --rm fedora:37`
 
-. Add the {fish-ppa} and upgrade to the latest {fish} version:
-+
-[source,bash]
-----
-sudo apt-get update
-sudo apt-get install software-properties-common
-sudo apt-add-repository ppa:fish-shell/release-3
-----
-+
-This is needed to install the latest {fish} version that is compatible with
-our selected {tide} version.
-+
-If you hadn't installed {fish} before, you don't have to do anything else,
-since the installation script will already try to install {fish}.
-+
-If {fish} was already installed, you'll have to upgrade it manually before
-running the installation script:
-+
-[source,bash]
-----
-sudo apt-get update
-sudo apt-get upgrade
-----
+| Ubuntu 22.04
+| `podman run -it -v $PWD:/ws:z -w /ws --rm ubuntu:22.04`
+| `docker run -it -v $PWD:/ws -w /ws --rm ubuntu:22.04`
 
-. Install {lsd}.
-Since {lsd} is not available in the Ubuntu repository, you'll have to install
-it with {cargo}:
-+
-[source,bash]
-----
-sudo apt-get update
-sudo apt-get install cargo rustc
-cargo install lsd
-export PATH="$HOME/.cargo/bin:$PATH"
-----
+| macOS 10.15 Catalina
+| no image available
+| no image available
 
-. Run the install script:
-+
-[source,bash]
-----
-./install.sh
-----
+|===
