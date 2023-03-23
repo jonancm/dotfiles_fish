@@ -240,6 +240,8 @@ install_nerd_fonts() {
 	RELEASE_TAG="${1}"
 	FONTS_DIR="${2}"
 	FONTS_LIST="${@:3}"
+	DOWNLOAD_DIR="${SCRIPT_DIR}/fonts"
+	mkdir -p ${DOWNLOAD_DIR}
 	for FONT_NAME in ${FONTS_LIST}; do
 		DEST_DIR="${FONTS_DIR}/nerd-fonts/${FONT_NAME}"
 		if [ -e "${DEST_DIR}" ]; then
@@ -247,7 +249,7 @@ install_nerd_fonts() {
 		else
 			RELEASE_FILE="${FONT_NAME}.zip"
 			RELEASE_URL="https://github.com/ryanoasis/nerd-fonts/releases/download/${RELEASE_TAG}/${RELEASE_FILE}"
-			DOWNLOADED_FILE="/tmp/${RELEASE_FILE}"
+			DOWNLOADED_FILE="${DOWNLOAD_DIR}/${RELEASE_FILE}"
 			echo "Downloading ${RELEASE_URL} ..."
 			wget -c "${RELEASE_URL}" -O "${DOWNLOADED_FILE}"
 			if [ "$?" -ne 0 ]; then
@@ -356,10 +358,15 @@ check_prerrequisites() {
 
 bootstrap_os
 check_prerrequisites
-prompt_install_nerd_fonts
+
+# realpath is installed in check_prerrequisites, so we can't compute SCRIPT_DIR
+# earlier than this
 SCRIPT_DIR=`dirname $(realpath "${BASH_SOURCE}")`
+
+prompt_install_nerd_fonts
 link_fish_files
 install_fisher
+
 echo "To set fish as your default shell, run: chsh -s `command -v fish`"
 echo
 echo "Done!"
