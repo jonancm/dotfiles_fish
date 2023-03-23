@@ -414,14 +414,27 @@ sudo_if_needed() {
 	fi
 }
 
+link_files() {
+	SRC="${@:-1}"
+	DST="${@:$#:$#}"
+	for SRCPATH in $SRC; do
+		OUTPUT=`ln -sv $SRCPATH $DST 2>&1`
+		if [ $? -eq 0 ]; then
+			print_success "${OUTPUT}\n"
+		else
+			print_caution "${OUTPUT}\n"
+		fi
+	done
+}
+
 link_fish_files() {
 	print_title "Linking fish configuration files ...\n"
 	FISH_CONFIG="${HOME}/.config/fish"
 	mkdir -pv ${FISH_CONFIG}/{conf.d,functions}
 	set +e
-	ln -sv ${SCRIPT_DIR}/conf.d/*.fish ${FISH_CONFIG}/conf.d/
-	ln -sv ${SCRIPT_DIR}/functions/*.fish ${FISH_CONFIG}/functions/
-	ln -sv ${SCRIPT_DIR}/fish_* ${FISH_CONFIG}/
+	link_files ${SCRIPT_DIR}/conf.d/*.fish ${FISH_CONFIG}/conf.d/
+	link_files ${SCRIPT_DIR}/functions/*.fish ${FISH_CONFIG}/functions/
+	link_files ${SCRIPT_DIR}/fish_* ${FISH_CONFIG}/
 	set -e
 	echo
 }
