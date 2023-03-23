@@ -95,7 +95,9 @@ uninstall_pkgs() {
 
 uninstall_fish() {
 	if command -v fish &> /dev/null; then
-		INSTALLED_VERSION=`get_version fish`
+		INSTALLED_VERSION=`detect_fish_version`
+		print_caution "fish ${DESIRED_FISH_VERSION} is required, but fish ${INSTALLED_VERSION} is installed\n"
+		print_info "Trying to uninstall fish ${INSTALLED_VERSION} ...\n"
 		if [ "${INSTALLED_VERSION}" != "${DESIRED_FISH_VERSION}" ]; then
 			uninstall_pkgs fish
 		fi
@@ -115,32 +117,50 @@ bootstrap_apt() {
 }
 
 bootstrap_debian() {
+	print_title "Executing bootstrap process for Debian ...\n"
 	bootstrap_apt
 	# Uninstall fish if it's already installed
 	uninstall_fish
 	# Add PPA to install latest fish version
+	print_info "Trying to add fish package repository ...\n"
 	install_pkg_if_not_found curl
 	install_pkg_if_not_found gpg
+	print_info "Repository: "
 	echo 'deb http://download.opensuse.org/repositories/shells:/fish:/release:/3/Debian_11/ /' | run_privileged tee /etc/apt/sources.list.d/shells:fish:release:3.list
 	curl -fsSL https://download.opensuse.org/repositories/shells:fish:release:3/Debian_11/Release.key | gpg --dearmor | run_privileged tee /etc/apt/trusted.gpg.d/shells_fish_release_3.gpg > /dev/null
 	# Install lsd using cargo
-	install_pkgs cargo rustc
-	cargo install lsd --version 0.18.0 # last crate version compatible with Debian's outdated cargo version
-	export PATH="$HOME/.cargo/bin:$PATH"
+	export PATH="$PATH:$HOME/.cargo/bin"
+	if ! command -v lsd &> /dev/null; then
+		print_info "Trying to install lsd ...\n"
+		install_pkg_if_not_found cargo
+		install_pkg_if_not_found rustc
+		cargo install lsd --version 0.18.0 # last crate version compatible with Debian's outdated cargo version
+	fi
+}
+
+bootstrap_fedora() {
+	print_title "Executing bootstrap process for Fedora ...\n"
+	install_pkg_if_not_found util-linux-user chsh
 }
 
 bootstrap_ubuntu() {
+	print_title "Executing bootstrap process for Ubuntu ...\n"
 	bootstrap_apt
 	# Uninstall fish if it's already installed
 	uninstall_fish
 	# Add PPA to install latest fish version
-	install_pkgs software-properties-common
+	print_info "Trying to add fish PPA ...\n"
+	install_pkg_if_not_found software-properties-common apt-add-repository
 	run_privileged apt-add-repository ppa:fish-shell/release-3
 	run_privileged apt-get update
 	# Install lsd using cargo
-	install_pkgs cargo rustc
-	cargo install lsd
-	export PATH="$HOME/.cargo/bin:$PATH"
+	export PATH="$PATH:$HOME/.cargo/bin"
+	if ! command -v lsd &> /dev/null; then
+		print_info "Trying to install lsd ...\n"
+		install_pkg_if_not_found cargo
+		install_pkg_if_not_found rustc
+		cargo install lsd
+	fi
 }
 
 bootstrap_macports() {
@@ -156,43 +176,80 @@ bootstrap_macports() {
 }
 
 bootstrap_macos() {
+	print_title "Executing bootstrap process for macOS ...\n"
 	bootstrap_macports
 	uninstall_fish
 }
 
 bootstrap_os() {
-	SUPPORTED_PLATFORMS=(
-		"Debian 11"
-		"Fedora 37"
-		"macOS 10+"
-		"Ubuntu 22.04"
-	)
-	HANDLERS=(
-		bootstrap_debian
-		do_nothing
-		bootstrap_macos
-		bootstrap_ubuntu
-	)
-	OPTION_INDEX=""
-	while [ "$OPTION_INDEX" == "" ]; do
-		echo "What operating system / distribution are you using?"
-		N=0
-		for PLATFORM in "${SUPPORTED_PLATFORMS[@]}"; do
-			N=$(($N+1))
-			echo " ${N}) ${PLATFORM}"
-		done
-		read -p "Enter an option: " OPTION_NUMBER
-		if [ "$OPTION_NUMBER" -lt 1 ] || [ "$OPTION_NUMBER" -gt "$N" ]; then
-			print_failure "Invalid answer: $OPTION_NUMBER\n"
-			OPTION_INDEX=""
-		else
-			OPTION_INDEX=$(($OPTION_NUMBER-1))
-		fi
-	done
-	PLATFORM=${SUPPORTED_PLATFORMS[$OPTION_INDEX]}
-	print_title "Executing bootstrap process for ${PLATFORM} ...\n"
-	${HANDLERS[$OPTION_INDEX]}
+	print_info "Detecting OS ... "
+
+	declare -A SUPPORTED_FAMILIES
+	SUPPORTED_FAMILIES[debian]="Debian"
+	SUPPORTED_FAMILIES[fedora]="Fedora"
+	SUPPORTED_FAMILIES[darwin]="macOS"
+	SUPPORTED_FAMILIES[ubuntu]="Ubuntu"
+
+	declare -A SUPPORTED_VERSIONS
+	SUPPORTED_VERSIONS[debian]="11"
+	SUPPORTED_VERSIONS[fedora]="37"
+	SUPPORTED_VERSIONS[darwin]="10.15"
+	SUPPORTED_VERSIONS[ubuntu]="22.04"
+
+	OS_FAMILY=`detect_os_family`
+	OS_DISTRO=`detect_os_distro`
+	if [ ! -z "${OS_DISTRO}" ]; then
+		OS_LABEL="$OS_DISTRO"
+	else
+		OS_LABEL="$OS_FAMILY"
+	fi
+	OS_NAME="${SUPPORTED_FAMILIES[$OS_LABEL]}"
+	OS_VERSION=`detect_os_version`
+
+	print_success "${OS_NAME} ${OS_VERSION}\n"
+
+	declare -A HANDLERS
+	HANDLERS[debian:11]=bootstrap_debian
+	HANDLERS[fedora:37]=bootstrap_fedora
+	HANDLERS[darwin:10.15]=bootstrap_macos
+	HANDLERS[ubuntu:22.04]=bootstrap_ubuntu
+
+	${HANDLERS[$OS_LABEL:$OS_VERSION]}
 	echo
+}
+
+detect_os_family() {
+	uname | tr '[:upper:]' '[:lower:]'
+}
+
+detect_os_distro() {
+	case `detect_os_family` in
+		darwin)
+			;;
+		linux)
+			grep '^ID=' /etc/os-release | awk '{split($0,a,"="); print(a[2])}'
+			;;
+		*)
+			panic "unknown OS family"
+			;;
+	esac
+}
+
+detect_os_version() {
+	case `detect_os_family` in
+		darwin)
+			;;
+		linux)
+			grep '^VERSION_ID=' /etc/os-release | awk '{gsub(/"/,""); split($0,a,"="); print a[2]}'
+			;;
+		*)
+			panic "unknown OS family"
+			;;
+	esac
+}
+
+detect_fish_version() {
+	fish --version | awk '{print($3)}'
 }
 
 # Install package <pkg> if the executable <exe> cannot be found in the PATH
@@ -231,10 +288,10 @@ install_pkgs () {
 	fi
 }
 
-case `uname` in
-	"Darwin")
+case `detect_os_family` in
+	"darwin")
 		;;
-	"Linux")
+	"linux")
 		declare -A REQUIRES_ROOT
 		REQUIRES_ROOT=(
 			["/usr/share/fonts"]=1
@@ -345,23 +402,16 @@ link_fish_files() {
 	echo
 }
 
-get_version() {
-	BIN_NAME="${1}"
-	EXPECTED_VERSION="${2}"
-	${BIN_NAME} --version | awk '{print($3)}' # FIXME: awk expression will only work with fish
-}
-
-ensure_version() {
-	BIN_NAME="${1}"
-	EXPECTED_VERSION="${2}"
-	VERSION=`get_version ${BIN_NAME}`
-	if [ "${VERSION}" != "${EXPECTED_VERSION}" ]; then
-		panic "expected ${BIN_NAME} version ${EXPECTED_VERSION}, got ${VERSION} instead!"
+ensure_fish_version() {
+	EXPECTED_VERSION="${1}"
+	INSTALLED_VERSION=`detect_fish_version`
+	if [ "${INSTALLED_VERSION}" != "${EXPECTED_VERSION}" ]; then
+		panic "expected fish version ${EXPECTED_VERSION}, got ${INSTALLED_VERSION} instead!"
 	fi
 }
 
 install_fisher() {
-	ensure_version fish ${DESIRED_FISH_VERSION}
+	ensure_fish_version ${DESIRED_FISH_VERSION}
 	FISH_SCRIPT="https://raw.githubusercontent.com/jorgebucaran/fisher/main/functions/fisher.fish"
 	print_title "Installing fisher ...\n"
 	echo "I need to fetch and run the script ${FISH_SCRIPT}"
@@ -374,12 +424,12 @@ install_fisher() {
 wget -q -O - ${FISH_SCRIPT} | source
 fisher update
 EOF
-			print_success "Installation finished!\n"
 			echo
 			print_caution "To start a fish session, run: fish\n"
 			print_caution "To configure the tide prompt, run: tide configure\n"
 			;;
 		*)
+			echo
 			print_caution "Please install fisher manually:\n"
 			print_caution "    fish\n"
 			print_caution "    wget -q -O /tmp/fisher.fish ${FISH_SCRIPT}\n"
@@ -401,11 +451,11 @@ check_prerrequisites() {
 	install_pkg_if_not_found fontconfig fc-cache
 	install_pkg_if_not_found lsd
 	install_pkg_if_not_found unzip
-	case `uname` in
-		"Darwin")
+	case `detect_os_family` in
+		"darwin")
 			install_pkg_if_not_found realpath
 			;;
-		"Linux")
+		"linux")
 			install_pkg_if_not_found coreutils realpath
 			;;
 	esac
@@ -423,6 +473,9 @@ prompt_install_nerd_fonts
 link_fish_files
 install_fisher
 
-print_caution "To set fish as your default shell, run: chsh -s `command -v fish`\n"
-echo
+if command -v chsh &> /dev/null; then
+	print_caution "To set fish as your default shell, run: chsh -s `command -v fish`\n"
+	echo
+fi
+
 print_success "Done!\n"
