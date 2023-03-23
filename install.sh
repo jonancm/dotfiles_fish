@@ -4,9 +4,58 @@ set -e
 
 DESIRED_FISH_VERSION="3.6.0"
 
+NOCOLOR='\033[0m'
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+ORANGE='\033[0;33m'
+BLUE='\033[0;34m'
+PURPLE='\033[0;35m'
+CYAN='\033[0;36m'
+LGRAY='\033[0;37m'
+DGRAY='\033[1;30m'
+LTRED='\033[1;31m'
+LGREEN='\033[1;32m'
+YELLOW='\033[1;33m'
+LBLUE='\033[1;34m'
+LPURPLE='\033[1;35m'
+LCYAN='\033[1;36m'
+WHITE='\033[1;37m'
+
+print_regular() {
+	echo -ne "$*"
+}
+
+print_info() {
+	echo -ne "${BLUE}$*${NOCOLOR}"
+}
+
+print_title() {
+	echo -ne "${LBLUE}$*${NOCOLOR}"
+}
+
+print_success() {
+	echo -ne "${GREEN}$*${NOCOLOR}"
+}
+
+print_caution() {
+	echo -ne "${YELLOW}$*${NOCOLOR}"
+}
+
+print_warning() {
+	print_caution "WARNING: $*"
+}
+
+print_failure() {
+	echo -ne "${RED}$*${NOCOLOR}"
+}
+
+print_error() {
+	print_failure "ERROR: $*" >&2
+}
+
 # Print error and exit
 panic() {
-	echo "Error: $*" >&2
+	print_failure "FATAL: $*\n"
 	exit 1
 }
 
@@ -57,11 +106,11 @@ bootstrap_apt() {
 	read -p "Update apt database? [y/n] " yn
 	case $yn in
 		[yY])
-			echo "Updating apt database ..."
+			print_info "Updating apt database ...\n"
 			run_privileged apt-get update
 			;;
 		*)
-			echo "Will not update apt database"
+			print_caution "Will not update apt database\n"
 	esac
 }
 
@@ -98,11 +147,11 @@ bootstrap_macports() {
 	read -p "Update port database? [y/n] " yn
 	case $yn in
 		[yY])
-			echo "Updating port database ..."
+			print_info "Updating port database ...\n"
 			run_privileged port -v selfupdate
 			;;
 		*)
-			echo "Will not update port database"
+			print_caution "Will not update port database\n"
 	esac
 }
 
@@ -134,14 +183,14 @@ bootstrap_os() {
 		done
 		read -p "Enter an option: " OPTION_NUMBER
 		if [ "$OPTION_NUMBER" -lt 1 ] || [ "$OPTION_NUMBER" -gt "$N" ]; then
-			echo "Invalid answer: $OPTION_NUMBER"
+			print_failure "Invalid answer: $OPTION_NUMBER\n"
 			OPTION_INDEX=""
 		else
 			OPTION_INDEX=$(($OPTION_NUMBER-1))
 		fi
 	done
 	PLATFORM=${SUPPORTED_PLATFORMS[$OPTION_INDEX]}
-	echo "Executing bootstrap process for ${PLATFORM} ..."
+	print_title "Executing bootstrap process for ${PLATFORM} ...\n"
 	${HANDLERS[$OPTION_INDEX]}
 	echo
 }
@@ -154,17 +203,17 @@ install_pkg_if_not_found() {
 	if [ -z "${BIN_NAME}" ]; then
 		BIN_NAME="${PKG_NAME}"
 	fi
-	echo -n "Checking ${PKG_NAME} ... "
+	print_regular "Checking ${PKG_NAME} ... "
 	if ! command -v "${BIN_NAME}" &> /dev/null; then
-		echo "${BIN_NAME} not found"
-		echo "Trying to install ${PKG_NAME} ..."
+		print_failure "${BIN_NAME} not found\n"
+		print_info "Trying to install ${PKG_NAME} ...\n"
 		install_pkgs "${PKG_NAME}"
 		if [ $? -ne 0 ]; then
 			panic "failed to install package: ${PKG_NAME}"
 		fi
 	else
 		BIN_PATH=`command -v "${BIN_NAME}"`
-		echo "${BIN_PATH}"
+		print_success "${BIN_PATH}\n"
 	fi
 }
 
@@ -217,7 +266,7 @@ prompt_install_nerd_fonts() {
 				done
 				read -p "Enter an option: " OPTION_NUMBER
 				if [ "$OPTION_NUMBER" -lt 1 ] || [ "$OPTION_NUMBER" -gt "$N" ]; then
-					echo "Invalid answer: $OPTION_NUMBER"
+					print_failure "Invalid answer: $OPTION_NUMBER\n"
 					OPTION_INDEX=""
 				else
 					OPTION_INDEX=$(($OPTION_NUMBER))
@@ -230,7 +279,7 @@ prompt_install_nerd_fonts() {
 				Meslo
 			;;
 		*)
-			echo "Will not install Nerd Fonts."
+			print_caution "Will not install Nerd Fonts.\n"
 			echo
 			;;
 	esac
@@ -239,7 +288,7 @@ prompt_install_nerd_fonts() {
 # Install the given Nerd Fonts
 # install_nerd_fonts <version> <fonts_dir> <font> [<font> ...]
 install_nerd_fonts() {
-	echo "Installing Nerd Fonts ..."
+	print_title "Installing Nerd Fonts ...\n"
 	RELEASE_TAG="${1}"
 	FONTS_DIR="${2}"
 	FONTS_LIST="${@:3}"
@@ -248,28 +297,28 @@ install_nerd_fonts() {
 	for FONT_NAME in ${FONTS_LIST}; do
 		DEST_DIR="${FONTS_DIR}/nerd-fonts/${FONT_NAME}"
 		if [ -e "${DEST_DIR}" ]; then
-			echo "${FONT_NAME} is already installed at ${DEST_DIR}"
+			print_caution "${FONT_NAME} is already installed at ${DEST_DIR}\n"
 		else
 			RELEASE_FILE="${FONT_NAME}.zip"
 			RELEASE_URL="https://github.com/ryanoasis/nerd-fonts/releases/download/${RELEASE_TAG}/${RELEASE_FILE}"
 			DOWNLOADED_FILE="${DOWNLOAD_DIR}/${RELEASE_FILE}"
-			echo "Downloading ${RELEASE_URL} ..."
+			print_info "Downloading ${RELEASE_URL} ...\n"
 			wget -c "${RELEASE_URL}" -O "${DOWNLOADED_FILE}"
 			if [ "$?" -ne 0 ]; then
-				echo "Failed to download ${FONT_NAME}"
+				print_failure "Failed to download ${FONT_NAME}\n"
 			else
 				sudo_if_needed ${REQUIRES_ROOT[$FONTS_DIR]} \
 					mkdir -p "${DEST_DIR}"
-				echo "Unpacking ${DOWNLOADED_FILE} ..."
+				print_info "Unpacking ${DOWNLOADED_FILE} ...\n"
 				sudo_if_needed ${REQUIRES_ROOT[$FONTS_DIR]} \
 					unzip "${DOWNLOADED_FILE}" '*.ttf' -d "${DEST_DIR}"
 				rm -iv "${DOWNLOADED_FILE}"
-				echo "Installed ${FONT_NAME} -> ${DEST_DIR}"
+				print_success "Installed ${FONT_NAME} -> ${DEST_DIR}\n"
 			fi
 		fi
 	done
 	echo
-	echo "Updating font cache ..."
+	print_title "Updating font cache ...\n"
 	fc-cache -f "${FONTS_DIR}"
 	echo
 }
@@ -285,7 +334,7 @@ sudo_if_needed() {
 }
 
 link_fish_files() {
-	echo "Linking fish configuration files ..."
+	print_title "Linking fish configuration files ...\n"
 	FISH_CONFIG="${HOME}/.config/fish"
 	mkdir -pv ${FISH_CONFIG}/{conf.d,functions}
 	set +e
@@ -314,10 +363,10 @@ ensure_version() {
 install_fisher() {
 	ensure_version fish ${DESIRED_FISH_VERSION}
 	FISH_SCRIPT="https://raw.githubusercontent.com/jorgebucaran/fisher/main/functions/fisher.fish"
-	echo "Installing fisher ..."
+	print_title "Installing fisher ...\n"
 	echo "I need to fetch and run the script ${FISH_SCRIPT}"
-	echo "I'm about to download a script from the internet and pipe it through fish!"
-	echo "This can have serious security implications!"
+	print_caution "I'm about to download a script from the internet and pipe it through fish!\n"
+	print_warning "This can have serious security implications!\n"
 	read -p "Would you like to proceed? [y/n] " yn
 	case $yn in
 		[yY])
@@ -325,25 +374,27 @@ install_fisher() {
 wget -q -O - ${FISH_SCRIPT} | source
 fisher update
 EOF
-			echo "Installation finished!"
+			print_success "Installation finished!\n"
 			echo
-			echo "To start a fish session, run: fish"
-			echo "To configure the tide prompt, run: tide configure"
+			print_caution "To start a fish session, run: fish\n"
+			print_caution "To configure the tide prompt, run: tide configure\n"
 			;;
 		*)
-			echo "Please install fisher manually:"
-			echo "    fish"
-			echo "    wget -q -O - ${FISH_SCRIPT} | source"
-			echo "    fisher update"
-			echo "Optionally:"
-			echo "    tide configure"
+			print_caution "Please install fisher manually:\n"
+			print_caution "    fish\n"
+			print_caution "    wget -q -O /tmp/fisher.fish ${FISH_SCRIPT}\n"
+			print_caution "    less /tmp/fisher.fish # check script for malicious code\n"
+			print_caution "    source /tmp/fisher.fish\n"
+			print_caution "    fisher update\n"
+			print_caution "Optionally:\n"
+			print_caution "    tide configure\n"
 			echo
 			;;
 	esac
 }
 
 check_prerrequisites() {
-	echo "Checking prerrequisites ..."
+	print_title "Checking prerrequisites ...\n"
 	install_pkg_if_not_found curl # fisher uses curl and we can't change this fact
 	install_pkg_if_not_found wget # we prefer wget to be able to resume downloads
 	install_pkg_if_not_found fish
@@ -372,6 +423,6 @@ prompt_install_nerd_fonts
 link_fish_files
 install_fisher
 
-echo "To set fish as your default shell, run: chsh -s `command -v fish`"
+print_caution "To set fish as your default shell, run: chsh -s `command -v fish`\n"
 echo
-echo "Done!"
+print_success "Done!\n"
