@@ -130,7 +130,7 @@ bootstrap_debian() {
 	install_pkg_if_not_found curl
 	install_pkg_if_not_found gpg
 	print_info "Repository: "
-	echo 'deb http://download.opensuse.org/repositories/shells:/fish:/release:/3/Debian_11/ /' | run_privileged tee /etc/apt/sources.list.d/shells:fish:release:3.list
+	echo 'deb http://download.opensuse.org/repositories/shells:/fish:/release:/3/Debian_11/ /' | run_privileged tee /etc/apt/sources.list.d/fish_v3.list
 	curl -fsSL https://download.opensuse.org/repositories/shells:fish:release:3/Debian_11/Release.key | gpg --dearmor | run_privileged tee /etc/apt/trusted.gpg.d/shells_fish_release_3.gpg > /dev/null
 	# Install lsd using cargo
 	export PATH="$PATH:$HOME/.cargo/bin"
