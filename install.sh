@@ -4,97 +4,15 @@ set -e
 
 DESIRED_FISH_VERSION="3.6.0"
 
-NOCOLOR='\033[0m'
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-ORANGE='\033[0;33m'
-BLUE='\033[0;34m'
-PURPLE='\033[0;35m'
-CYAN='\033[0;36m'
-LGRAY='\033[0;37m'
-DGRAY='\033[1;30m'
-LTRED='\033[1;31m'
-LGREEN='\033[1;32m'
-YELLOW='\033[1;33m'
-LBLUE='\033[1;34m'
-LPURPLE='\033[1;35m'
-LCYAN='\033[1;36m'
-WHITE='\033[1;37m'
-
-print_regular() {
-	echo -ne "$*"
-}
-
-print_info() {
-	echo -ne "${BLUE}$*${NOCOLOR}"
-}
-
-print_tip() {
-	echo -ne "${ORANGE}$*${NOCOLOR}"
-}
-
-print_title() {
-	echo -ne "${LBLUE}$*${NOCOLOR}"
-}
-
-print_success() {
-	echo -ne "${GREEN}$*${NOCOLOR}"
-}
-
-print_caution() {
-	echo -ne "${YELLOW}$*${NOCOLOR}"
-}
-
-print_warning() {
-	print_caution "WARNING: $*"
-}
-
-print_failure() {
-	echo -ne "${RED}$*${NOCOLOR}"
-}
-
-print_error() {
-	print_failure "ERROR: $*" >&2
-}
-
-# Print error and exit
-panic() {
-	print_failure "FATAL: $*\n"
-	exit 1
-}
-
-# Run command as privileged (root) user
-# run_privileged <cmd> [<arg> ...]
-run_privileged() {
-	if [ `id -u` -eq 0 ]; then
-		$*
-	else
-		if command -v doas &> /dev/null; then
-			doas $*
-		elif command -v please &> /dev/null; then
-			please $*
-		elif command -v sudo &> /dev/null; then
-			sudo $*
-		else
-			panic "failed to run as root: could not find any of: doas, please, sudo"
-		fi
-	fi
-}
+source $(dirname ${BASH_SOURCE})/bash_utils/console/print.sh
+source $(dirname ${BASH_SOURCE})/bash_utils/pkgman/apt.sh
+source $(dirname ${BASH_SOURCE})/bash_utils/pkgman/install.sh
+source $(dirname ${BASH_SOURCE})/bash_utils/pkgman/uninstall.sh
+source $(dirname ${BASH_SOURCE})/bash_utils/system/detect.sh
+source $(dirname ${BASH_SOURCE})/bash_utils/system/su.sh
 
 do_nothing() {
 	echo > /dev/null
-}
-
-uninstall_pkgs() {
-	if command -v apt-get &> /dev/null; then
-		run_privileged apt-get remove -y $*
-	elif command -v dnf &> /dev/null; then
-		run_privileged dnf remove -y $*
-	elif command -v port &> /dev/null; then
-		run_privileged port -v uninstall $*
-	else
-		panic "could not find a known package manager"
-	fi
 }
 
 uninstall_fish() {
@@ -106,18 +24,6 @@ uninstall_fish() {
 			uninstall_pkgs fish
 		fi
 	fi
-}
-
-bootstrap_apt() {
-	read -p "Update apt database? [y/n] " yn
-	case $yn in
-		[yY])
-			print_info "Updating apt database ...\n"
-			run_privileged apt-get update
-			;;
-		*)
-			print_caution "Will not update apt database\n"
-	esac
 }
 
 bootstrap_debian() {
@@ -242,74 +148,8 @@ bootstrap_os() {
 	echo
 }
 
-detect_os_family() {
-	uname | tr '[:upper:]' '[:lower:]'
-}
-
-detect_os_distro() {
-	case `detect_os_family` in
-		darwin)
-			;;
-		linux)
-			grep '^ID=' /etc/os-release | awk '{split($0,a,"="); print(a[2])}'
-			;;
-		*)
-			panic "unknown OS family"
-			;;
-	esac
-}
-
-detect_os_version() {
-	case `detect_os_family` in
-		darwin)
-			;;
-		linux)
-			grep '^VERSION_ID=' /etc/os-release | awk '{gsub(/"/,""); split($0,a,"="); print a[2]}'
-			;;
-		*)
-			panic "unknown OS family"
-			;;
-	esac
-}
-
 detect_fish_version() {
 	fish --version | awk '{print($3)}'
-}
-
-# Install package <pkg> if the executable <exe> cannot be found in the PATH
-# install_pkg_if_not_found <pkg> <exe>
-install_pkg_if_not_found() {
-	PKG_NAME="${1}"
-	BIN_NAME="${2}"
-	if [ -z "${BIN_NAME}" ]; then
-		BIN_NAME="${PKG_NAME}"
-	fi
-	print_regular "Checking ${PKG_NAME} ... "
-	if ! command -v "${BIN_NAME}" &> /dev/null; then
-		print_failure "${BIN_NAME} not found\n"
-		print_info "Trying to install ${PKG_NAME} ...\n"
-		install_pkgs "${PKG_NAME}"
-		if [ $? -ne 0 ]; then
-			panic "failed to install package: ${PKG_NAME}"
-		fi
-	else
-		BIN_PATH=`command -v "${BIN_NAME}"`
-		print_success "${BIN_PATH}\n"
-	fi
-}
-
-# Install packages
-# install_pkgs <pkg> [<pkg> ...]
-install_pkgs () {
-	if command -v apt-get &> /dev/null; then
-		run_privileged apt-get install -y $*
-	elif command -v dnf &> /dev/null; then
-		run_privileged dnf install -y $*
-	elif command -v port &> /dev/null; then
-		run_privileged port -v install $*
-	else
-		panic "could not find a known package manager"
-	fi
 }
 
 case `detect_os_family` in
@@ -402,16 +242,6 @@ install_nerd_fonts() {
 	print_title "Updating font cache ...\n"
 	fc-cache -f "${FONTS_DIR}"
 	echo
-}
-
-sudo_if_needed() {
-	SUDO_NEEDED="${1}"
-	COMMAND="${@:2}"
-	if [ $SUDO_NEEDED -eq 1 ]; then
-		run_privileged ${COMMAND}
-	else
-		${COMMAND}
-	fi
 }
 
 link_files() {

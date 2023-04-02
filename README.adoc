@@ -79,13 +79,13 @@ If you're not running the script as root, you'll also need one of these:
 +
 [source,bash]
 ----
-git clone https://github.com/jonancm/dotfiles_fish.git
+git clone --recurse-submodules https://github.com/jonancm/dotfiles_fish.git
 ----
 * Using SSH:
 +
 [source,bash]
 ----
-git clone git@github.com:jonancm/dotfiles_fish.git
+git clone --recurse-submodules git@github.com:jonancm/dotfiles_fish.git
 ----
 
 . Run the installation script:
