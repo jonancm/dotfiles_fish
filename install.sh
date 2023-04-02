@@ -4,12 +4,12 @@ set -e
 
 DESIRED_FISH_VERSION="3.6.0"
 
-source $(dirname ${BASH_SOURCE})/bash_utils/console/print.sh
-source $(dirname ${BASH_SOURCE})/bash_utils/pkgman/apt.sh
-source $(dirname ${BASH_SOURCE})/bash_utils/pkgman/install.sh
-source $(dirname ${BASH_SOURCE})/bash_utils/pkgman/uninstall.sh
-source $(dirname ${BASH_SOURCE})/bash_utils/system/detect.sh
-source $(dirname ${BASH_SOURCE})/bash_utils/system/su.sh
+source $(dirname ${BASH_SOURCE})/bash_utils/pkg/apt.sh
+source $(dirname ${BASH_SOURCE})/bash_utils/pkg/install.sh
+source $(dirname ${BASH_SOURCE})/bash_utils/pkg/uninstall.sh
+source $(dirname ${BASH_SOURCE})/bash_utils/sys/detect.sh
+source $(dirname ${BASH_SOURCE})/bash_utils/sys/su.sh
+source $(dirname ${BASH_SOURCE})/bash_utils/term/print.sh
 
 do_nothing() {
 	echo > /dev/null
@@ -71,18 +71,6 @@ bootstrap_ubuntu() {
 		install_pkg_if_not_found rustc
 		cargo install lsd
 	fi
-}
-
-bootstrap_macports() {
-	read -p "Update port database? [y/n] " yn
-	case $yn in
-		[yY])
-			print_info "Updating port database ...\n"
-			run_privileged port -v selfupdate
-			;;
-		*)
-			print_caution "Will not update port database\n"
-	esac
 }
 
 bootstrap_macos() {
