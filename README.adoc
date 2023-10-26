@@ -48,6 +48,10 @@ Therefore, only the following combinations are supported:
 | 3.6.0
 | {fish-obs}
 
+| Debian 12
+| 3.6.0
+| Official Debian repository
+
 | Fedora 37
 | 3.6.0
 | Official Fedora repository
@@ -122,6 +126,10 @@ The commands in the following section reflect this.
 | Debian 11
 | `podman run -it -v $PWD:/ws:z -w /ws --rm debian:11`
 | `docker run -it -v $PWD:/ws -w /ws --rm debian:11`
+
+| Debian 12
+| `podman run -it -v $PWD:/ws:z -w /ws --rm debian:12`
+| `docker run -it -v $PWD:/ws -w /ws --rm debian:12`
 
 | Fedora 37
 | `podman run -it -v $PWD:/ws:z -w /ws --rm fedora:37`

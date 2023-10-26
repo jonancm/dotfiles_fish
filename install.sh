@@ -27,6 +27,10 @@ uninstall_fish() {
 }
 
 bootstrap_debian() {
+	RELEASE=$1
+	if [[ -z ${RELEASE} ]]; then
+		RELEASE=11
+	fi
 	print_title "Executing bootstrap process for Debian ...\n"
 	bootstrap_apt
 	# Uninstall fish if it's already installed
@@ -35,9 +39,11 @@ bootstrap_debian() {
 	print_info "Trying to add fish package repository ...\n"
 	install_pkg_if_not_found curl
 	install_pkg_if_not_found gpg
-	print_info "Repository: "
-	echo 'deb http://download.opensuse.org/repositories/shells:/fish:/release:/3/Debian_11/ /' | run_privileged tee /etc/apt/sources.list.d/fish_v3.list
-	curl -fsSL https://download.opensuse.org/repositories/shells:fish:release:3/Debian_11/Release.key | gpg --dearmor | run_privileged tee /etc/apt/trusted.gpg.d/shells_fish_release_3.gpg > /dev/null
+	if [[ ${RELEASE} -eq 11 ]]; then # workaround: in Debian 12 we have fish 3.6.0 in the official repo
+		print_info "Repository: "
+		echo "deb http://download.opensuse.org/repositories/shells:/fish:/release:/3/Debian_${RELEASE}/ /" | run_privileged tee /etc/apt/sources.list.d/fish_v3.list
+		curl -fsSL https://download.opensuse.org/repositories/shells:fish:release:3/Debian_${RELEASE}/Release.key | gpg --dearmor | run_privileged tee /etc/apt/trusted.gpg.d/shells_fish_release_3.gpg > /dev/null
+	fi
 	# Install lsd using cargo
 	export PATH="$PATH:$HOME/.cargo/bin"
 	if ! command -v lsd &> /dev/null; then
@@ -46,6 +52,14 @@ bootstrap_debian() {
 		install_pkg_if_not_found rustc
 		cargo install lsd --version 0.18.0 # last crate version compatible with Debian's outdated cargo version
 	fi
+}
+
+bootstrap_debian_11() {
+	bootstrap_debian 11
+}
+
+bootstrap_debian_12() {
+	bootstrap_debian 12
 }
 
 bootstrap_fedora() {
@@ -108,7 +122,8 @@ bootstrap_os() {
 
 	declare -A HANDLERS
 	HANDLERS[debian]=bootstrap_debian
-	HANDLERS[debian:11]=bootstrap_debian
+	HANDLERS[debian:11]=bootstrap_debian_11
+	HANDLERS[debian:12]=bootstrap_debian_12
 	HANDLERS[fedora]=bootstrap_fedora
 	HANDLERS[fedora:37]=bootstrap_fedora
 	HANDLERS[darwin]=bootstrap_macos
