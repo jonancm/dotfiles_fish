@@ -1,7 +1,7 @@
 if command -v nvim &> /dev/null
-	set -xg EDITOR nvim
+	set -x EDITOR nvim
 else if command -v vim &> /dev/null
-	set -xg EDITOR vim
+	set -x EDITOR vim
 end
 
-set -xg PAGER less
+set -x PAGER less
