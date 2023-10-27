@@ -27,39 +27,28 @@ uninstall_fish() {
 }
 
 bootstrap_debian() {
-	RELEASE=$1
-	if [[ -z ${RELEASE} ]]; then
-		RELEASE=11
-	fi
-	print_title "Executing bootstrap process for Debian ...\n"
+	print_title "Executing bootstrap process for Debian ${OS_VERSION} ...\n"
 	bootstrap_apt
-	# Uninstall fish if it's already installed
-	uninstall_fish
-	# Add PPA to install latest fish version
-	print_info "Trying to add fish package repository ...\n"
-	install_pkg_if_not_found curl
-	install_pkg_if_not_found gpg
-	if [[ ${RELEASE} -eq 11 ]]; then # workaround: in Debian 12 we have fish 3.6.0 in the official repo
+	# Workarounds for Debian 11, because it has very old software in the official repos
+	if [[ ${OS_VERSION} -eq 11 ]]; then
+		# Uninstall fish if it's already installed
+		uninstall_fish
+		# Add PPA to install latest fish version
+		print_info "Trying to add fish package repository ...\n"
+		install_pkg_if_not_found curl
+		install_pkg_if_not_found gpg
 		print_info "Repository: "
-		echo "deb http://download.opensuse.org/repositories/shells:/fish:/release:/3/Debian_${RELEASE}/ /" | run_privileged tee /etc/apt/sources.list.d/fish_v3.list
-		curl -fsSL https://download.opensuse.org/repositories/shells:fish:release:3/Debian_${RELEASE}/Release.key | gpg --dearmor | run_privileged tee /etc/apt/trusted.gpg.d/shells_fish_release_3.gpg > /dev/null
+		echo "deb http://download.opensuse.org/repositories/shells:/fish:/release:/3/Debian_${OS_VERSION}/ /" | run_privileged tee /etc/apt/sources.list.d/fish_v3.list
+		curl -fsSL https://download.opensuse.org/repositories/shells:fish:release:3/Debian_${OS_VERSION}/Release.key | gpg --dearmor | run_privileged tee /etc/apt/trusted.gpg.d/shells_fish_release_3.gpg > /dev/null
+		# Install lsd using cargo
+		export PATH="$PATH:$HOME/.cargo/bin"
+		if ! command -v lsd &> /dev/null; then
+			print_info "Trying to install lsd ...\n"
+			install_pkg_if_not_found cargo
+			install_pkg_if_not_found rustc
+			cargo install lsd --version 0.18.0 # last crate version compatible with Debian's outdated cargo version
+		fi
 	fi
-	# Install lsd using cargo
-	export PATH="$PATH:$HOME/.cargo/bin"
-	if ! command -v lsd &> /dev/null; then
-		print_info "Trying to install lsd ...\n"
-		install_pkg_if_not_found cargo
-		install_pkg_if_not_found rustc
-		cargo install lsd --version 0.18.0 # last crate version compatible with Debian's outdated cargo version
-	fi
-}
-
-bootstrap_debian_11() {
-	bootstrap_debian 11
-}
-
-bootstrap_debian_12() {
-	bootstrap_debian 12
 }
 
 bootstrap_fedora() {
@@ -104,6 +93,7 @@ bootstrap_os() {
 
 	declare -A SUPPORTED_VERSIONS
 	SUPPORTED_VERSIONS[debian]="11"
+	SUPPORTED_VERSIONS[debian]="12"
 	SUPPORTED_VERSIONS[fedora]="37"
 	SUPPORTED_VERSIONS[darwin]="10.15"
 	SUPPORTED_VERSIONS[ubuntu]="22.04"
@@ -122,8 +112,8 @@ bootstrap_os() {
 
 	declare -A HANDLERS
 	HANDLERS[debian]=bootstrap_debian
-	HANDLERS[debian:11]=bootstrap_debian_11
-	HANDLERS[debian:12]=bootstrap_debian_12
+	HANDLERS[debian:11]=bootstrap_debian
+	HANDLERS[debian:12]=bootstrap_debian
 	HANDLERS[fedora]=bootstrap_fedora
 	HANDLERS[fedora:37]=bootstrap_fedora
 	HANDLERS[darwin]=bootstrap_macos
