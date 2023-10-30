@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 set -e
 
@@ -88,6 +88,7 @@ bootstrap_os() {
 	declare -A SUPPORTED_FAMILIES
 	SUPPORTED_FAMILIES[debian]="Debian"
 	SUPPORTED_FAMILIES[fedora]="Fedora"
+	SUPPORTED_FAMILIES[freebsd]="FreeBSD"
 	SUPPORTED_FAMILIES[darwin]="macOS"
 	SUPPORTED_FAMILIES[ubuntu]="Ubuntu"
 
@@ -95,6 +96,7 @@ bootstrap_os() {
 	SUPPORTED_VERSIONS[debian]="11"
 	SUPPORTED_VERSIONS[debian]="12"
 	SUPPORTED_VERSIONS[fedora]="37"
+	SUPPORTED_VERSIONS[freebsd]="13.2"
 	SUPPORTED_VERSIONS[darwin]="10.15"
 	SUPPORTED_VERSIONS[ubuntu]="22.04"
 
@@ -116,6 +118,8 @@ bootstrap_os() {
 	HANDLERS[debian:12]=bootstrap_debian
 	HANDLERS[fedora]=bootstrap_fedora
 	HANDLERS[fedora:37]=bootstrap_fedora
+	HANDLERS[freebsd]=do_nothing
+	HANDLERS[freebsd:13.2]=do_nothing
 	HANDLERS[darwin]=bootstrap_macos
 	HANDLERS[darwin:10.15]=bootstrap_macos
 	HANDLERS[ubuntu]=bootstrap_ubuntu
