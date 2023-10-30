@@ -245,11 +245,13 @@ link_files() {
 	SRC="${@:-1}"
 	DST="${@:$#:$#}"
 	for SRCPATH in $SRC; do
-		OUTPUT=`ln -sv $SRCPATH $DST 2>&1`
-		if [ $? -eq 0 ]; then
-			print_success "${OUTPUT}\n"
-		else
-			print_caution "${OUTPUT}\n"
+		if [[ ! -d "${SRCPATH}" ]]; then # workaround to prevent linking directories
+			OUTPUT=`ln -sv $SRCPATH $DST 2>&1`
+			if [ $? -eq 0 ]; then
+				print_success "${OUTPUT}\n"
+			else
+				print_caution "${OUTPUT}\n"
+			fi
 		fi
 	done
 }
